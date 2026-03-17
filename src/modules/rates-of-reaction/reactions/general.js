@@ -11,9 +11,9 @@ export const generalReaction = {
   assignmentGoal: 'Explore each variable one at a time. Record which has the largest effect on the reaction rate before moving on to the quiz.',
 
   particleTypes: [
-    { type: 'A', label: 'A', color: '#4f9cf0', shape: 'circle', radius: 14, mass: 1 },
-    { type: 'B', label: 'B', color: '#f0913a', shape: 'diamond', radius: 14, mass: 1 },
-    { type: 'C', label: 'C', color: '#3dba7e', shape: 'triangle', radius: 16, mass: 2 },
+    { type: 'A', label: 'A', color: '#4f9cf0', shape: 'circle', radius: 13, mass: 1 },
+    { type: 'B', label: 'B', color: '#f0913a', shape: 'diamond', radius: 13, mass: 1 },
+    { type: 'C', label: 'C', color: '#3dba7e', shape: 'triangle', radius: 20, mass: 2 },
   ],
 
   variables: [
@@ -49,6 +49,10 @@ export const generalReaction = {
   // Activation energy threshold (relative, 0-1)
   activationEnergy: 0.4,
   catalystReduction: 0.5, // catalyst reduces activation energy by 50%
+
+  // Activation energy display values (kJ/mol) for the UI
+  activationEnergyKJ: 75,
+  activationEnergyWithCatalystKJ: 38,
 
   // Speed multiplier based on temperature
   speedFromTemp: (temp) => 0.5 + (temp / 100) * 2.5,

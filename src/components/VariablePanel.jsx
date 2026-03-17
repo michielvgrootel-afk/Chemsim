@@ -6,7 +6,7 @@ const ICONS = {
   zap: '\u26A1',
 }
 
-export function VariablePanel({ variables, values, onUpdate, particleCount, onParticleCountChange, minParticles, maxParticles }) {
+export function VariablePanel({ variables, values, onUpdate, particleCount, onParticleCountChange, minParticles, maxParticles, activationEnergyKJ, activationEnergyWithCatalystKJ }) {
   if (!variables) return null
 
   return (
@@ -44,6 +44,15 @@ export function VariablePanel({ variables, values, onUpdate, particleCount, onPa
           )}
         </div>
       ))}
+
+      {/* Activation Energy Display */}
+      {activationEnergyKJ != null && (
+        <ActivationEnergyCard
+          activationEnergyKJ={activationEnergyKJ}
+          activationEnergyWithCatalystKJ={activationEnergyWithCatalystKJ}
+          catalystActive={variables.some(v => v.id === 'catalyst') ? !!values.catalyst : true}
+        />
+      )}
     </div>
   )
 }
@@ -81,6 +90,53 @@ function SliderControl({ variable, value, onUpdate }) {
       {v.tooltip && (
         <p className="text-xs mt-2" style={{ color: '#6b7585' }}>{v.tooltip}</p>
       )}
+    </div>
+  )
+}
+
+function ActivationEnergyCard({ activationEnergyKJ, activationEnergyWithCatalystKJ, catalystActive }) {
+  return (
+    <div className="p-3 rounded-lg" style={{ background: '#2a2f3a' }}>
+      <h4 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#6b7585' }}>
+        Activation Energy
+      </h4>
+      <div className="space-y-2">
+        <div
+          className="flex items-center justify-between px-3 py-2 rounded"
+          style={{
+            background: !catalystActive ? '#1e2535' : '#22262f',
+            border: !catalystActive ? '1px solid #4f9cf0' : '1px solid transparent',
+          }}
+        >
+          <span className="text-xs" style={{ color: !catalystActive ? '#e8eaf0' : '#6b7585' }}>
+            Without catalyst
+          </span>
+          <span className="text-sm font-mono font-semibold" style={{ color: !catalystActive ? '#f0913a' : '#6b7585' }}>
+            {activationEnergyKJ} kJ/mol
+          </span>
+        </div>
+        {activationEnergyWithCatalystKJ != null && (
+          <div
+            className="flex items-center justify-between px-3 py-2 rounded"
+            style={{
+              background: catalystActive ? '#1e2535' : '#22262f',
+              border: catalystActive ? '1px solid #4f9cf0' : '1px solid transparent',
+            }}
+          >
+            <span className="text-xs" style={{ color: catalystActive ? '#e8eaf0' : '#6b7585' }}>
+              With catalyst
+            </span>
+            <span className="text-sm font-mono font-semibold" style={{ color: catalystActive ? '#3dba7e' : '#6b7585' }}>
+              {activationEnergyWithCatalystKJ} kJ/mol
+            </span>
+          </div>
+        )}
+        {activationEnergyWithCatalystKJ != null && (
+          <p className="text-xs mt-1" style={{ color: '#6b7585' }}>
+            Reduction: {Math.round((1 - activationEnergyWithCatalystKJ / activationEnergyKJ) * 100)}%
+          </p>
+        )}
+      </div>
     </div>
   )
 }

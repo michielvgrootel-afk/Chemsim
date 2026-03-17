@@ -103,7 +103,7 @@ export function SimulationPage({
         </div>
 
         {/* Right Panel */}
-        <div className="flex flex-col gap-4 p-4 overflow-y-auto" style={{ width: 340, minWidth: 300, borderLeft: '1px solid #363c4a' }}>
+        <div className="flex flex-col gap-4 p-4 overflow-y-auto" style={{ width: 340, minWidth: 300, borderLeft: '1px solid #363c4a', maxHeight: 'calc(100vh - 52px)' }}>
           <LiveGraph data={graphData} config={reaction.graph} />
           <VariablePanel
             variables={reaction.variables}
@@ -113,6 +113,8 @@ export function SimulationPage({
             onParticleCountChange={(val) => setParticleCount(val)}
             minParticles={SIM_DEFAULTS.minParticles}
             maxParticles={SIM_DEFAULTS.maxParticles}
+            activationEnergyKJ={reaction.activationEnergyKJ}
+            activationEnergyWithCatalystKJ={reaction.activationEnergyWithCatalystKJ}
           />
         </div>
       </div>

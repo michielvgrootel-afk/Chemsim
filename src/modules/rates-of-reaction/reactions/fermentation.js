@@ -10,10 +10,10 @@ export const fermentationReaction = {
   assignmentGoal: 'Find the temperature that gives the fastest fermentation rate. Observe what happens if the temperature is too high.',
 
   particleTypes: [
-    { type: 'GLU', label: 'Glu', color: '#f0c040', shape: 'hexagon', radius: 16, mass: 2 },
-    { type: 'ENZ', label: 'Enz', color: '#9b6ef0', shape: 'star', radius: 14, mass: 1 },
-    { type: 'ETH', label: 'EtOH', color: '#3dba7e', shape: 'circle', radius: 12, mass: 0.8 },
-    { type: 'CO2', label: 'CO\u2082', color: '#e05555', shape: 'diamond', radius: 10, mass: 0.5 },
+    { type: 'GLU', label: 'Glu', color: '#f0c040', shape: 'hexagon', radius: 22, mass: 2 },
+    { type: 'ENZ', label: 'Enz', color: '#9b6ef0', shape: 'star', radius: 16, mass: 1 },
+    { type: 'ETH', label: 'EtOH', color: '#3dba7e', shape: 'circle', radius: 11, mass: 0.8 },
+    { type: 'CO2', label: 'CO\u2082', color: '#e05555', shape: 'diamond', radius: 9, mass: 0.5 },
   ],
 
   variables: [
@@ -39,6 +39,11 @@ export const fermentationReaction = {
 
   activationEnergy: 0.3,
   catalystReduction: 0, // enzyme is always present, not a toggle
+
+  // Activation energy display values (kJ/mol) for the UI
+  // Enzyme lowers Ea dramatically compared to uncatalysed glucose decomposition
+  activationEnergyKJ: 200,
+  activationEnergyWithCatalystKJ: 50,
 
   // Enzyme activity curve: peaks at ~37C, drops sharply above 60C (denaturation)
   speedFromTemp: (temp) => {
