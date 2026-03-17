@@ -46,10 +46,8 @@ export function useSimulation(reaction, canvasRef) {
 
     gridRef.current = new SpatialGrid(SIM_DEFAULTS.gridCellSize, width, height)
 
-    const vars = variablesRef.current
-    const effectiveCount = rxn.countFromConc
-      ? rxn.countFromConc(vars.concentration, particleCount)
-      : particleCount
+    // Particle count slider = actual number of particles spawned
+    const effectiveCount = particleCount
 
     const particles = []
     const typeEntries = Object.entries(rxn.initialRatio)

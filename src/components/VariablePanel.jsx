@@ -6,7 +6,7 @@ const ICONS = {
   zap: '\u26A1',
 }
 
-export function VariablePanel({ variables, values, onUpdate }) {
+export function VariablePanel({ variables, values, onUpdate, particleCount, onParticleCountChange, minParticles, maxParticles }) {
   if (!variables) return null
 
   return (
@@ -14,6 +14,27 @@ export function VariablePanel({ variables, values, onUpdate }) {
       <h3 className="text-sm font-semibold uppercase tracking-wider" style={{ color: '#6b7585' }}>
         Variables
       </h3>
+
+      {/* Particle count slider */}
+      {onParticleCountChange && (
+        <div className="p-3 rounded-lg" style={{ background: '#2a2f3a' }}>
+          <SliderControl
+            variable={{
+              id: '_particles',
+              label: 'Particles',
+              icon: 'flask',
+              min: minParticles || 10,
+              max: maxParticles || 100,
+              step: 1,
+              unit: '',
+              tooltip: 'Number of reactant particles in the simulation',
+            }}
+            value={particleCount}
+            onUpdate={(_, val) => onParticleCountChange(val)}
+          />
+        </div>
+      )}
+
       {variables.map(v => (
         <div key={v.id} className="p-3 rounded-lg" style={{ background: '#2a2f3a' }}>
           {v.type === 'toggle' ? (

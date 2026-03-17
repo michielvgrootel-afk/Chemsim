@@ -99,20 +99,6 @@ export function SimulationPage({
               {'\u21BA'} Reset
             </button>
 
-            {/* Particle count slider - visually separated */}
-            <div className="ml-auto flex items-center gap-3 px-3 py-1 rounded-lg" style={{ background: '#2a2f3a', border: '1px solid #363c4a' }}>
-              <span className="text-xs" style={{ color: '#6b7585' }}>Particles</span>
-              <input
-                type="range"
-                min={SIM_DEFAULTS.minParticles}
-                max={SIM_DEFAULTS.maxParticles}
-                value={particleCount}
-                onChange={(e) => setParticleCount(parseInt(e.target.value))}
-                className="w-24"
-                aria-label="Particle count"
-              />
-              <span className="text-sm font-mono w-8 text-center" style={{ color: '#4f9cf0' }}>{particleCount}</span>
-            </div>
           </div>
         </div>
 
@@ -123,6 +109,10 @@ export function SimulationPage({
             variables={reaction.variables}
             values={variables}
             onUpdate={updateVariable}
+            particleCount={particleCount}
+            onParticleCountChange={(val) => setParticleCount(val)}
+            minParticles={SIM_DEFAULTS.minParticles}
+            maxParticles={SIM_DEFAULTS.maxParticles}
           />
         </div>
       </div>
