@@ -10,9 +10,9 @@ export const haberReaction = {
   assignmentGoal: 'Allow the system to reach equilibrium, then change one variable. Observe how the equilibrium position shifts.',
 
   particleTypes: [
-    { type: 'N2', label: 'N\u2082', color: '#4f9cf0', shape: 'circle', radius: 18, mass: 2 },
+    { type: 'N2', label: 'N\u2082', color: '#4f9cf0', shape: 'circle', radius: 12, mass: 2 },
     { type: 'H2', label: 'H\u2082', color: '#f0c040', shape: 'diamond', radius: 8, mass: 0.5 },
-    { type: 'NH3', label: 'NH\u2083', color: '#3dba7e', shape: 'triangle', radius: 15, mass: 1.2 },
+    { type: 'NH3', label: 'NH\u2083', color: '#3dba7e', shape: 'triangle', radius: 20, mass: 1.2 },
   ],
 
   variables: [
