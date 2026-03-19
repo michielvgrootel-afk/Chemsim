@@ -22,6 +22,7 @@ export class Particle {
     this.reacting = false
     this.reactTimer = 0
     this.opacity = 1
+    this.bound = false  // Whether adsorbed to catalyst surface
 
     // Grid cell (updated each frame by spatial grid)
     this.cellX = 0
@@ -34,11 +35,27 @@ export class Particle {
     this.vy = Math.sin(angle) * speed
   }
 
-  update(dt, canvasWidth, canvasHeight) {
+  update(dt, canvasWidth, canvasHeight, effectiveFloor) {
     if (!this.alive) return
+
+    // Bound particles only drift slightly along x
+    if (this.bound) {
+      this.x += (Math.random() - 0.5) * 0.3
+      // Clamp to canvas bounds
+      if (this.x - this.radius < 0) this.x = this.radius
+      if (this.x + this.radius > canvasWidth) this.x = canvasWidth - this.radius
+      // Handle reaction animation even when bound
+      if (this.reacting) {
+        this.reactTimer -= dt
+        if (this.reactTimer <= 0) this.reacting = false
+      }
+      return
+    }
 
     this.x += this.vx * dt
     this.y += this.vy * dt
+
+    const floor = effectiveFloor || canvasHeight
 
     // Bounce off walls
     if (this.x - this.radius < 0) {
@@ -53,8 +70,8 @@ export class Particle {
       this.y = this.radius
       this.vy = Math.abs(this.vy)
     }
-    if (this.y + this.radius > canvasHeight) {
-      this.y = canvasHeight - this.radius
+    if (this.y + this.radius > floor) {
+      this.y = floor - this.radius
       this.vy = -Math.abs(this.vy)
     }
 

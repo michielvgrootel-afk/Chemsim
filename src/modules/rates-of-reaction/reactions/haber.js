@@ -38,14 +38,16 @@ export const haberReaction = {
       type: 'toggle',
       default: true,
       icon: 'zap',
-      tooltip: 'Iron catalyst speeds up both forward and reverse reactions equally \u2014 reaches equilibrium faster',
+      tooltip: 'Iron catalyst surface \u2014 N\u2082 and H\u2082 adsorb onto the surface, react, and NH\u2083 desorbs. Without it, the reaction is extremely slow.',
     },
   ],
 
   initialRatio: { N2: 0.25, H2: 0.75 },
 
-  activationEnergy: 0.55,
+  hasCatalystSurface: true,  // Enables heterogeneous catalyst surface mechanism
+  activationEnergy: 0.95,   // Very high — homogeneous reaction is extremely slow without catalyst
   catalystReduction: 0.45,
+  homogeneousGate: 0.02,    // Only 2% chance per collision without catalyst (vs 30% normally)
 
   // Activation energy display values (kJ/mol) for the UI
   activationEnergyKJ: 230,
@@ -93,7 +95,7 @@ export const haberReaction = {
   annotations: [
     {
       id: 'default',
-      text: 'The Haber process is reversible \u2014 N\u2082 and H\u2082 form NH\u2083, but NH\u2083 also decomposes back. Watch for equilibrium!',
+      text: 'Without the iron catalyst, this reaction barely happens. Toggle the catalyst ON to see N\u2082 and H\u2082 adsorb onto the surface and react!',
       condition: 'always',
     },
     {
@@ -108,7 +110,7 @@ export const haberReaction = {
     },
     {
       id: 'catalyst-on',
-      text: 'Iron catalyst active \u2014 speeds up BOTH directions equally. Equilibrium is reached faster, but the position doesn\'t change.',
+      text: 'Iron catalyst surface active \u2014 N\u2082 and H\u2082 adsorb, react on the surface, and NH\u2083 desorbs upward. The catalyst speeds up both directions equally.',
       condition: (vars) => vars.catalyst === true,
     },
     {

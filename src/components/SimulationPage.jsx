@@ -24,6 +24,7 @@ export function SimulationPage({
     updateVariable,
     stats,
     graphData,
+    activeAnnotation,
     initSimulation,
     update,
     draw,
@@ -71,6 +72,21 @@ export function SimulationPage({
         {/* Left: Canvas */}
         <div className="flex-1 p-4 flex flex-col gap-3">
           <Canvas canvasRef={canvasRef} width={SIM_DEFAULTS.canvasWidth} height={SIM_DEFAULTS.canvasHeight} />
+
+          {/* Annotation */}
+          {activeAnnotation && (
+            <div
+              className="rounded-lg text-sm leading-relaxed"
+              style={{
+                background: 'rgba(34, 38, 47, 0.95)',
+                border: '1px solid rgba(79, 156, 240, 0.35)',
+                color: '#e8eaf0',
+                padding: '10px 14px',
+              }}
+            >
+              {activeAnnotation}
+            </div>
+          )}
 
           {/* Canvas Controls */}
           <div className="flex items-center gap-4 flex-wrap">
