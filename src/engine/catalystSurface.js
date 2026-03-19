@@ -5,8 +5,8 @@ const BARRIER_HEIGHT = 30          // Logical pixels tall
 const BINDING_PROXIMITY = 250      // Max x-distance between bound particles for reaction
 const MAX_BOUND = 24               // Surface saturation limit
 const BIND_PROBABILITY = 0.8       // Chance of binding on surface contact
-const FORWARD_REACTION_PROB = 0.25 // Per-frame chance when valid group exists
-const REVERSE_REACTION_PROB = 0.08 // Per-frame chance for reverse surface reaction
+const FORWARD_REACTION_PROB = 0.20 // Per-frame chance when valid group exists
+const REVERSE_REACTION_PROB = 0.18 // Per-frame chance for reverse surface reaction
 const DRIFT_SPEED = 0.4            // Surface diffusion — bound particles drift toward neighbors
 
 export class CatalystSurface {
@@ -72,7 +72,7 @@ export class CatalystSurface {
       if (nearbyH2.length >= 3) {
         // Adjust probability based on equilibrium modifier
         // Higher eqModifier = more forward favored = higher probability
-        const adjustedProb = FORWARD_REACTION_PROB * (0.5 + eqModifier)
+        const adjustedProb = FORWARD_REACTION_PROB * eqModifier * 2
         if (Math.random() > adjustedProb) continue
 
         return {
@@ -100,7 +100,7 @@ export class CatalystSurface {
       for (let j = i + 1; j < boundNH3.length; j++) {
         if (Math.abs(boundNH3[i].x - boundNH3[j].x) < BINDING_PROXIMITY) {
           // Higher eqModifier = forward favored = less likely to reverse
-          const adjustedProb = REVERSE_REACTION_PROB * (1.5 - eqModifier)
+          const adjustedProb = REVERSE_REACTION_PROB * (1 - eqModifier) * 2
           if (Math.random() > adjustedProb) continue
 
           return {

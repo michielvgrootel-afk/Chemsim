@@ -75,9 +75,11 @@ export const haberReaction = {
   // Equilibrium: higher temp favours reverse, higher pressure favours forward
   equilibriumModifier: (vars) => {
     // Returns a value 0-1 where higher means more forward reaction
-    const tempEffect = 1 - ((vars.temperature - 200) / 400) * 0.6
-    const pressureEffect = (vars.concentration - 50) / 250 * 0.4
-    return Math.max(0.1, Math.min(0.9, 0.3 + tempEffect * 0.3 + pressureEffect))
+    // Haber is exothermic: high temp strongly favours reverse
+    const tempFraction = (vars.temperature - 200) / 400  // 0 at 200°C, 1 at 600°C
+    const tempEffect = 1 - tempFraction * 1.4            // 1.0 at 200°C, -0.4 at 600°C
+    const pressureEffect = (vars.concentration - 50) / 250 * 0.5
+    return Math.max(0.1, Math.min(0.95, 0.15 + tempEffect * 0.5 + pressureEffect))
   },
 
   reversible: true,
