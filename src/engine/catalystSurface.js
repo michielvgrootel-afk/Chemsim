@@ -8,6 +8,8 @@ const BIND_PROBABILITY = 0.8       // Chance of binding on surface contact
 const FORWARD_REACTION_PROB = 0.20 // Per-frame chance when valid group exists
 const REVERSE_REACTION_PROB = 0.18 // Per-frame chance for reverse surface reaction
 const DRIFT_SPEED = 0.4            // Surface diffusion — bound particles drift toward neighbors
+const MAX_RESIDENCE_TIME = 3.0     // Seconds before a bound particle spontaneously desorbs
+const DESORB_PROBABILITY = 0.03   // Per-frame chance of desorbing once past residence time
 
 export class CatalystSurface {
   constructor(canvasWidth, canvasHeight, active = false) {
@@ -43,6 +45,7 @@ export class CatalystSurface {
 
     // Bind the particle
     particle.bound = true
+    particle.boundTime = 0  // Track how long it's been on the surface
     particle.y = this.y - particle.radius
     particle.vx = 0
     particle.vy = 0
@@ -142,6 +145,28 @@ export class CatalystSurface {
         // Drift toward nearest complementary particle
         p.x += Math.sign(targetX - p.x) * DRIFT_SPEED
       }
+    }
+  }
+
+  /**
+   * Thermal desorption — particles that have been bound too long spontaneously
+   * leave the surface. Prevents surface saturation stalling the simulation.
+   */
+  desorb(dt, targetSpeed = 60) {
+    if (!this.active) return
+    const toRelease = []
+    for (const p of this.boundParticles) {
+      if (!p.alive) continue
+      p.boundTime = (p.boundTime || 0) + dt
+      if (p.boundTime > MAX_RESIDENCE_TIME && Math.random() < DESORB_PROBABILITY) {
+        toRelease.push(p)
+      }
+    }
+    for (const p of toRelease) {
+      p.bound = false
+      p.vx = (Math.random() - 0.5) * targetSpeed * 0.3
+      p.vy = -Math.abs(targetSpeed * (0.3 + Math.random() * 0.3))
+      this.boundParticles = this.boundParticles.filter(bp => bp !== p)
     }
   }
 

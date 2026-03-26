@@ -165,6 +165,8 @@ export function useSimulation(reaction, canvasRef) {
       }
       // Surface diffusion — bound particles drift toward complementary neighbors
       catalyst.diffuse()
+      // Thermal desorption — prevent surface saturation over time
+      catalyst.desorb(dt, targetSpeed)
     }
 
     // Spatial grid collision detection (skip bound particles — they don't collide)
