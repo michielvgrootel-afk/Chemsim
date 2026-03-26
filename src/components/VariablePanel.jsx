@@ -22,23 +22,23 @@ export function VariablePanel({ variables, values, onUpdate, particleCounts, onP
           </h4>
           {reactantTypes.map(typeId => {
             const pType = particleTypes?.find(pt => pt.type === typeId)
+            const count = particleCounts?.[typeId] ?? 0
             return (
-              <SliderControl
-                key={typeId}
-                variable={{
-                  id: `_count_${typeId}`,
-                  label: pType?.label || typeId,
-                  min: 0,
-                  max: 40,
-                  step: 1,
-                  unit: '',
-                }}
-                value={particleCounts?.[typeId] ?? 0}
-                onUpdate={(_, val) => {
-                  onParticleCountsChange(prev => ({ ...prev, [typeId]: val }))
-                }}
-                color={pType?.color}
-              />
+              <div key={typeId} className="flex items-center gap-2">
+                <span className="text-xs font-medium w-8 shrink-0" style={{ color: '#e8eaf0' }}>{pType?.label || typeId}</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={40}
+                  step={1}
+                  value={count}
+                  onChange={(e) => onParticleCountsChange(prev => ({ ...prev, [typeId]: parseInt(e.target.value) }))}
+                  className="flex-1"
+                  style={{ height: 20 }}
+                  aria-label={`${pType?.label || typeId} count`}
+                />
+                <span className="text-xs font-mono font-semibold w-6 text-right" style={{ color: pType?.color || '#4f9cf0' }}>{count}</span>
+              </div>
             )
           })}
         </div>
