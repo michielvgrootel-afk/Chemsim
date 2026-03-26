@@ -6,34 +6,47 @@ const ICONS = {
   zap: '\u26A1',
 }
 
-export function VariablePanel({ variables, values, onUpdate, particleCount, onParticleCountChange, minParticles, maxParticles, activationEnergyKJ, activationEnergyWithCatalystKJ }) {
+export function VariablePanel({ variables, values, onUpdate, particleCounts, onParticleCountsChange, particleTypes, initialRatio, activationEnergyKJ, activationEnergyWithCatalystKJ }) {
   if (!variables) return null
+
+  // Build per-type sliders from initialRatio (only reactant types)
+  const reactantTypes = initialRatio ? Object.keys(initialRatio) : []
 
   return (
     <div className="space-y-4">
+      {/* Per-particle-type count sliders */}
+      {reactantTypes.length > 0 && onParticleCountsChange && (
+        <div className="p-3 rounded-lg space-y-3" style={{ background: '#2a2f3a' }}>
+          <h4 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#6b7585' }}>
+            Initial Particles
+          </h4>
+          {reactantTypes.map(typeId => {
+            const pType = particleTypes?.find(pt => pt.type === typeId)
+            return (
+              <SliderControl
+                key={typeId}
+                variable={{
+                  id: `_count_${typeId}`,
+                  label: pType?.label || typeId,
+                  min: 0,
+                  max: 40,
+                  step: 1,
+                  unit: '',
+                }}
+                value={particleCounts?.[typeId] ?? 0}
+                onUpdate={(_, val) => {
+                  onParticleCountsChange(prev => ({ ...prev, [typeId]: val }))
+                }}
+                color={pType?.color}
+              />
+            )
+          })}
+        </div>
+      )}
+
       <h3 className="text-sm font-semibold uppercase tracking-wider" style={{ color: '#6b7585' }}>
         Variables
       </h3>
-
-      {/* Particle count slider */}
-      {onParticleCountChange && (
-        <div className="p-3 rounded-lg" style={{ background: '#2a2f3a' }}>
-          <SliderControl
-            variable={{
-              id: '_particles',
-              label: 'Particles',
-              icon: 'flask',
-              min: minParticles || 10,
-              max: maxParticles || 100,
-              step: 1,
-              unit: '',
-              tooltip: 'Number of reactant particles in the simulation',
-            }}
-            value={particleCount}
-            onUpdate={(_, val) => onParticleCountChange(val)}
-          />
-        </div>
-      )}
 
       {variables.map(v => (
         <div key={v.id} className="p-3 rounded-lg" style={{ background: '#2a2f3a' }}>
@@ -57,7 +70,7 @@ export function VariablePanel({ variables, values, onUpdate, particleCount, onPa
   )
 }
 
-function SliderControl({ variable, value, onUpdate }) {
+function SliderControl({ variable, value, onUpdate, color }) {
   const v = variable
   const displayValue = typeof value === 'number' ? value : v.default
 
@@ -65,10 +78,10 @@ function SliderControl({ variable, value, onUpdate }) {
     <div>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <span className="text-base">{ICONS[v.icon] || ''}</span>
+          {v.icon && <span className="text-base">{ICONS[v.icon] || ''}</span>}
           <span className="text-sm font-medium" style={{ color: '#e8eaf0' }}>{v.label}</span>
         </div>
-        <span className="text-sm font-mono font-semibold" style={{ color: '#4f9cf0' }}>
+        <span className="text-sm font-mono font-semibold" style={{ color: color || '#4f9cf0' }}>
           {typeof displayValue === 'number' ? (Number.isInteger(v.step) ? displayValue : displayValue.toFixed(1)) : displayValue} {v.unit}
         </span>
       </div>

@@ -33,7 +33,7 @@ export function useSimulation(reaction, canvasRef) {
   const reactionRef = useRef(reaction)
   reactionRef.current = reaction
 
-  const initSimulation = useCallback((particleCount = SIM_DEFAULTS.particleCount) => {
+  const initSimulation = useCallback((particleCounts = {}) => {
     const rxn = reactionRef.current
     if (!rxn) return
 
@@ -57,8 +57,6 @@ export function useSimulation(reaction, canvasRef) {
     }
 
     const vars = variablesRef.current
-    // Particle count slider = actual number of particles spawned
-    const effectiveCount = particleCount
 
     // Constrain spawn area above catalyst barrier if active
     const spawnFloor = catalystRef.current?.active
@@ -66,17 +64,11 @@ export function useSimulation(reaction, canvasRef) {
       : height - 20
 
     const particles = []
-    const typeEntries = Object.entries(rxn.initialRatio)
-    let remaining = effectiveCount
 
-    typeEntries.forEach(([typeId, ratio], idx) => {
-      const count = idx === typeEntries.length - 1
-        ? remaining
-        : Math.round(effectiveCount * ratio)
-      remaining -= count
-
+    // Spawn particles based on per-type counts
+    for (const [typeId, count] of Object.entries(particleCounts)) {
       const pType = rxn.particleTypes.find(pt => pt.type === typeId)
-      if (!pType) return
+      if (!pType) continue
 
       const speed = rxn.speedFromTemp ? rxn.speedFromTemp(vars.temperature) : 1
 
@@ -94,7 +86,7 @@ export function useSimulation(reaction, canvasRef) {
         p.setRandomVelocity(speed * 60)
         particles.push(p)
       }
-    })
+    }
 
     particlesRef.current = particles
     statsRef.current = { reactionCount: 0, reactionRate: 0, rateWindow: [], elapsed: 0 }

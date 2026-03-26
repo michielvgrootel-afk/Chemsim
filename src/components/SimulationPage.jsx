@@ -14,7 +14,7 @@ export function SimulationPage({
   pendingSwitch, onConfirmSwitch, onCancelSwitch
 }) {
   const canvasRef = useRef(null)
-  const [particleCount, setParticleCount] = useState(SIM_DEFAULTS.particleCount)
+  const [particleCounts, setParticleCounts] = useState(() => getDefaultParticleCounts(reaction))
   const [showQuiz, setShowQuiz] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const lastResetRef = useRef(0)
@@ -32,16 +32,21 @@ export function SimulationPage({
 
   const { pause, resume, reset, getFPS } = useGameLoop(update, draw)
 
-  // Initialize simulation when reaction or particle count changes
+  // Reset particle counts when reaction changes
+  useEffect(() => {
+    setParticleCounts(getDefaultParticleCounts(reaction))
+  }, [reaction])
+
+  // Initialize simulation when reaction or particle counts change
   useEffect(() => {
     if (reaction && canvasRef.current) {
       const timer = setTimeout(() => {
-        initSimulation(particleCount)
+        initSimulation(particleCounts)
         reset()
       }, 50)
       return () => clearTimeout(timer)
     }
-  }, [reaction, particleCount, initSimulation, reset])
+  }, [reaction, particleCounts, initSimulation, reset])
 
   const handlePauseResume = useCallback(() => {
     if (isPaused) {
@@ -57,10 +62,10 @@ export function SimulationPage({
     const now = Date.now()
     if (now - lastResetRef.current < SIM_DEFAULTS.resetDebounceMs) return
     lastResetRef.current = now
-    initSimulation(particleCount)
+    initSimulation(particleCounts)
     reset()
     setIsPaused(false)
-  }, [initSimulation, particleCount, reset])
+  }, [initSimulation, particleCounts, reset])
 
   const quiz = module.getQuiz(reaction.id)
 
@@ -125,10 +130,10 @@ export function SimulationPage({
             variables={reaction.variables}
             values={variables}
             onUpdate={updateVariable}
-            particleCount={particleCount}
-            onParticleCountChange={(val) => setParticleCount(val)}
-            minParticles={SIM_DEFAULTS.minParticles}
-            maxParticles={SIM_DEFAULTS.maxParticles}
+            particleCounts={particleCounts}
+            onParticleCountsChange={setParticleCounts}
+            particleTypes={reaction.particleTypes}
+            initialRatio={reaction.initialRatio}
             activationEnergyKJ={reaction.activationEnergyKJ}
             activationEnergyWithCatalystKJ={reaction.activationEnergyWithCatalystKJ}
           />
@@ -159,4 +164,18 @@ export function SimulationPage({
       />
     </div>
   )
+}
+
+function getDefaultParticleCounts(reaction) {
+  if (!reaction) return {}
+  const total = SIM_DEFAULTS.particleCount
+  const counts = {}
+  const entries = Object.entries(reaction.initialRatio)
+  let remaining = total
+  entries.forEach(([typeId, ratio], idx) => {
+    const count = idx === entries.length - 1 ? remaining : Math.round(total * ratio)
+    counts[typeId] = Math.max(0, count)
+    remaining -= count
+  })
+  return counts
 }
