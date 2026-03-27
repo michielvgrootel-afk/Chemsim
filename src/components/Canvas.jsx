@@ -31,21 +31,33 @@ export function Canvas({ canvasRef, width = 800, height = 500 }) {
 
   // Re-apply DPI scaling if the window moves between monitors with different DPR
   useEffect(() => {
-    const mq = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`)
-    const handleChange = () => {
-      const canvas = canvasRef.current
-      if (!canvas) return
-      const dpr = window.devicePixelRatio || 1
-      canvas.width = width * dpr
-      canvas.height = height * dpr
-      canvas.style.width = `${width}px`
-      canvas.style.height = `${height}px`
-      const ctx = canvas.getContext('2d')
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      canvas._dpr = dpr
+    let mq = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`)
+    let currentHandler = null
+
+    const listen = () => {
+      mq = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`)
+      currentHandler = () => {
+        const canvas = canvasRef.current
+        if (!canvas) return
+        const dpr = window.devicePixelRatio || 1
+        canvas.width = width * dpr
+        canvas.height = height * dpr
+        canvas.style.width = `${width}px`
+        canvas.style.height = `${height}px`
+        const ctx = canvas.getContext('2d')
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+        canvas._dpr = dpr
+        // Re-register for the new DPR
+        mq.removeEventListener('change', currentHandler)
+        listen()
+      }
+      mq.addEventListener('change', currentHandler)
     }
-    mq.addEventListener?.('change', handleChange)
-    return () => mq.removeEventListener?.('change', handleChange)
+    listen()
+
+    return () => {
+      if (currentHandler) mq.removeEventListener('change', currentHandler)
+    }
   }, [canvasRef, width, height])
 
   return (

@@ -61,14 +61,15 @@ export const haberReaction = {
   reactions: [
     {
       reactants: ['N2', 'H2'],
+      extraConsume: ['H2', 'H2'],  // Need 2 more nearby H2 (total: 1 N2 + 3 H2)
       products: ['NH3', 'NH3'],
-      // Forward reaction
+      // Forward reaction: N2 + 3H2 → 2NH3
     },
     {
       reactants: ['NH3', 'NH3'],
-      products: ['N2', 'H2'],
+      products: ['N2', 'H2', 'H2', 'H2'],
       isReverse: true,
-      // Reverse reaction - favoured at high temperature
+      // Reverse reaction: 2NH3 → N2 + 3H2
     },
   ],
 

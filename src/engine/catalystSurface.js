@@ -166,7 +166,8 @@ export class CatalystSurface {
       p.bound = false
       p.vx = (Math.random() - 0.5) * targetSpeed * 0.3
       p.vy = -Math.abs(targetSpeed * (0.3 + Math.random() * 0.3))
-      this.boundParticles = this.boundParticles.filter(bp => bp !== p)
+      const idx = this.boundParticles.indexOf(p)
+      if (idx !== -1) this.boundParticles.splice(idx, 1)
     }
   }
 
@@ -175,7 +176,8 @@ export class CatalystSurface {
    */
   unbind(particle) {
     particle.bound = false
-    this.boundParticles = this.boundParticles.filter(p => p !== particle)
+    const idx = this.boundParticles.indexOf(particle)
+    if (idx !== -1) this.boundParticles.splice(idx, 1)
   }
 
   /**

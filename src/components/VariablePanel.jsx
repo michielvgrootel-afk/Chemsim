@@ -63,7 +63,7 @@ export function VariablePanel({ variables, values, onUpdate, particleCounts, onP
         <ActivationEnergyCard
           activationEnergyKJ={activationEnergyKJ}
           activationEnergyWithCatalystKJ={activationEnergyWithCatalystKJ}
-          catalystActive={variables.some(v => v.id === 'catalyst') ? !!values.catalyst : true}
+          catalystActive={variables.some(v => v.id === 'catalyst') ? !!values.catalyst : false}
         />
       )}
     </div>

@@ -33,6 +33,11 @@ export function useSimulation(reaction, canvasRef) {
   const reactionRef = useRef(reaction)
   reactionRef.current = reaction
 
+  const reactantTypesRef = useRef([])
+  if (reaction) {
+    reactantTypesRef.current = reaction.reactions.flatMap(r => r.reactants)
+  }
+
   const initSimulation = useCallback((particleCounts = {}) => {
     const rxn = reactionRef.current
     if (!rxn) return
@@ -216,6 +221,27 @@ export function useSimulation(reaction, canvasRef) {
           const midX = (particleA.x + particleB.x) / 2
           const midY = (particleA.y + particleB.y) / 2
 
+          // Consume extra nearby reactants if stoichiometry requires more than 2
+          let extraOk = true
+          const extraConsumed = []
+          if (rule.extraConsume && rule.extraConsume.length > 0) {
+            for (const extraType of rule.extraConsume) {
+              const nearby = particles.find(p =>
+                p.alive && !p.bound && p !== particleA && p !== particleB &&
+                !extraConsumed.includes(p) &&
+                p.type === extraType &&
+                p.distanceTo(particleA) < 80
+              )
+              if (nearby) {
+                extraConsumed.push(nearby)
+              } else {
+                extraOk = false
+                break
+              }
+            }
+          }
+          if (!extraOk) continue
+
           // Remove reactants (unless preserved as catalyst)
           if (rule.preserveCatalyst) {
             const catalystType = rxn.particleTypes.find(pt => pt.shape === 'star')?.type
@@ -227,6 +253,9 @@ export function useSimulation(reaction, canvasRef) {
           } else {
             particleA.alive = false
             particleB.alive = false
+          }
+          for (const ep of extraConsumed) {
+            ep.alive = false
           }
 
           // Create products
@@ -389,8 +418,7 @@ export function useSimulation(reaction, canvasRef) {
     }
 
     // Check for all reactants consumed
-    const reactantTypes = rxn.reactions.flatMap(r => r.reactants)
-    const hasReactants = particlesRef.current.some(p => p.alive && reactantTypes.includes(p.type))
+    const hasReactants = particlesRef.current.some(p => p.alive && reactantTypesRef.current.includes(p.type))
     if (!hasReactants && particlesRef.current.length > 0 && !rxn.reversible) {
       setAllConsumed(true)
     }
