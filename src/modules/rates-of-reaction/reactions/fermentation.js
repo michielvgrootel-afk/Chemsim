@@ -40,6 +40,17 @@ export const fermentationReaction = {
   activationEnergy: 0.3,
   catalystReduction: 0, // enzyme is always present, not a toggle
 
+  // Enzyme denaturing configuration
+  denature: {
+    startTemp: 55,       // enzymes start denaturing above this temp
+    fullTemp: 65,        // rapid denaturing above this temp
+    ratePerSecond: 0.03, // probability per enzyme per second at startTemp
+    maxRate: 0.15,       // probability per enzyme per second at fullTemp+
+    denaturedColor: '#7a7a7a',  // grey
+    denaturedShape: 'cracked',  // unfolded = cracked, broken structure
+    denaturedLabel: 'Den',
+  },
+
   // Activation energy display values (kJ/mol) for the UI
   // Enzyme lowers Ea dramatically compared to uncatalysed glucose decomposition
   activationEnergyKJ: 200,
@@ -82,17 +93,27 @@ export const fermentationReaction = {
     },
     {
       id: 'optimal',
-      text: 'Optimal temperature range (35-40\u00b0C) \u2014 enzyme activity is at its peak. This is body temperature!',
+      text: 'Optimal temperature (35\u201340\u00b0C) \u2014 the enzyme\u2019s active site fits the substrate perfectly. Maximum reaction rate!',
       condition: (vars) => vars.temperature >= 33 && vars.temperature <= 42,
     },
     {
-      id: 'denaturation',
-      text: '\u26a0\ufe0f Approaching denaturation temperature! Above 60\u00b0C, the enzyme unfolds and stops working permanently.',
-      condition: (vars) => vars.temperature >= 55,
+      id: 'denaturing-warning',
+      text: '\u26a0\ufe0f Enzymes are starting to denature! The heat is unfolding their 3D protein structure, destroying the active site. Watch the purple stars turn grey.',
+      condition: (vars) => vars.temperature >= 55 && vars.temperature < 65,
+    },
+    {
+      id: 'denaturing-rapid',
+      text: '\u26a0\ufe0f Rapid denaturation! Enzymes are permanently losing their shape. Without working enzymes, glucose cannot be broken down. This is why boiling kills yeast.',
+      condition: (vars) => vars.temperature >= 65,
+    },
+    {
+      id: 'all-denatured',
+      text: 'All enzymes have denatured \u2014 the reaction has stopped completely. Denaturation is irreversible. Reset to try again.',
+      condition: 'allDenatured',
     },
     {
       id: 'cold',
-      text: 'Low temperature \u2014 enzyme activity is very slow. This is why dough rises slowly in a cold kitchen.',
+      text: 'Low temperature \u2014 enzyme activity is very slow. Particles have less kinetic energy, so fewer successful collisions. This is why dough rises slowly in a cold kitchen.',
       condition: (vars) => vars.temperature <= 15,
     },
     {

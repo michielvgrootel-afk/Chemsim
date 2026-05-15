@@ -6,7 +6,7 @@ const ICONS = {
   zap: '\u26A1',
 }
 
-export function VariablePanel({ variables, values, onUpdate, particleCounts, onParticleCountsChange, particleTypes, initialRatio, activationEnergyKJ, activationEnergyWithCatalystKJ }) {
+export function VariablePanel({ variables, values, onUpdate, particleCounts, onParticleCountsChange, particleTypes, initialRatio, maxParticleCount = 40, activationEnergyKJ, activationEnergyWithCatalystKJ }) {
   if (!variables) return null
 
   // Build per-type sliders from initialRatio (only reactant types)
@@ -29,7 +29,7 @@ export function VariablePanel({ variables, values, onUpdate, particleCounts, onP
                 <input
                   type="range"
                   min={0}
-                  max={40}
+                  max={maxParticleCount}
                   step={1}
                   value={count}
                   onChange={(e) => onParticleCountsChange(prev => ({ ...prev, [typeId]: parseInt(e.target.value) }))}

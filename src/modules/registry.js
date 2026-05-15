@@ -2,12 +2,11 @@
 // Adding a new simulation = create a new module file + add one line here
 
 import { ratesOfReaction } from './rates-of-reaction/index'
+import { solubility } from './solubility/index'
 
 export const MODULE_REGISTRY = [
   ratesOfReaction,
-  // Phase 2: add new modules here
-  // { id: 'equilibrium', ... },
-  // { id: 'collision-theory', ... },
+  solubility,
 ]
 
 export function getModule(moduleId) {

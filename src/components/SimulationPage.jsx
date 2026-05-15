@@ -25,6 +25,8 @@ export function SimulationPage({
     stats,
     graphData,
     activeAnnotation,
+    enzymeStats,
+    dissolutionStats,
     initSimulation,
     update,
     draw,
@@ -134,6 +136,7 @@ export function SimulationPage({
             onParticleCountsChange={setParticleCounts}
             particleTypes={reaction.particleTypes}
             initialRatio={reaction.initialRatio}
+            maxParticleCount={reaction.maxParticleCount || 40}
             activationEnergyKJ={reaction.activationEnergyKJ}
             activationEnergyWithCatalystKJ={reaction.activationEnergyWithCatalystKJ}
           />
@@ -142,7 +145,7 @@ export function SimulationPage({
 
       {/* Status Bar */}
       <div className="px-4 pb-4">
-        <StatusBar stats={stats} onTakeQuiz={() => setShowQuiz(true)} />
+        <StatusBar stats={stats} enzymeStats={enzymeStats} dissolutionStats={dissolutionStats} onTakeQuiz={() => setShowQuiz(true)} />
       </div>
 
       {/* Quiz Modal */}
@@ -168,7 +171,7 @@ export function SimulationPage({
 
 function getDefaultParticleCounts(reaction) {
   if (!reaction) return {}
-  const total = SIM_DEFAULTS.particleCount
+  const total = reaction.totalParticles || SIM_DEFAULTS.particleCount
   const counts = {}
   const entries = Object.entries(reaction.initialRatio)
   let remaining = total

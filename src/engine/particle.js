@@ -22,7 +22,10 @@ export class Particle {
     this.reacting = false
     this.reactTimer = 0
     this.opacity = 1
-    this.bound = false  // Whether adsorbed to catalyst surface
+    this.bound = false       // Whether adsorbed to catalyst surface
+    this.latticeIon = false  // Whether locked in a crystal lattice (solubility)
+    this.polarity = 0        // -1.0 (nonpolar) to +1.0 (polar) for solubility sim
+    this.buoyancy = 0        // Vertical force bias (positive = floats up)
 
     // Grid cell (updated each frame by spatial grid)
     this.cellX = 0
@@ -38,8 +41,15 @@ export class Particle {
   update(dt, canvasWidth, canvasHeight, effectiveFloor) {
     if (!this.alive) return
 
-    // Bound particles only drift slightly along x
+    // Bound particles
     if (this.bound) {
+      if (this.latticeIon) {
+        // Lattice ions are completely frozen in place
+        this.vx = 0
+        this.vy = 0
+        return
+      }
+      // Catalyst-bound particles drift slightly along x
       this.x += (Math.random() - 0.5) * 0.3
       // Clamp to canvas bounds
       if (this.x - this.radius < 0) this.x = this.radius

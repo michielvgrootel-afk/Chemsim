@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 
-export function FrontPage({ module, onStart, activeModules }) {
+export function FrontPage({ module, allModules, activeModuleId, onModuleChange, onStart, activeModules }) {
   const [selectedReaction, setSelectedReaction] = useState(0)
   const [name, setName] = useState('')
   const [nameError, setNameError] = useState(false)
@@ -29,6 +29,27 @@ export function FrontPage({ module, onStart, activeModules }) {
   return (
     <div className="min-h-screen flex items-center justify-center p-6" style={{ background: '#1a1d24' }}>
       <div className="w-full" style={{ maxWidth: 640 }}>
+
+        {/* Module Tabs */}
+        {allModules && allModules.length > 1 && (
+          <div className="flex gap-2 mb-4 justify-center">
+            {allModules.map(mod => (
+              <button
+                key={mod.id}
+                onClick={() => { onModuleChange(mod.id); setSelectedReaction(0) }}
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold cursor-pointer border-0 transition-all"
+                style={{
+                  background: mod.id === activeModuleId ? '#4f9cf0' : '#1e2535',
+                  color: mod.id === activeModuleId ? '#fff' : '#6b7585',
+                  border: mod.id === activeModuleId ? 'none' : '1px solid #363c4a',
+                  minHeight: 44,
+                }}
+              >
+                {mod.name}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Reaction Selector Pills */}
         <div className="flex gap-2 mb-6 flex-wrap justify-center">

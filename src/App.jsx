@@ -5,7 +5,7 @@ import { TopBar } from './components/TopBar'
 import { FrontPage } from './components/FrontPage'
 import { SimulationPage } from './components/SimulationPage'
 import { TeacherDashboard } from './teacher/TeacherDashboard'
-import { getModule } from './modules/registry'
+import { getModule, getAllModules } from './modules/registry'
 import { getItem } from './utils/storage'
 import { SCREENS, STORAGE_KEYS } from './utils/constants'
 
@@ -16,7 +16,9 @@ export default function App() {
   const [currentReaction, setCurrentReaction] = useState(null)
   const [pendingSwitch, setPendingSwitch] = useState(null)
 
-  const module = getModule('rates-of-reaction')
+  const [activeModuleId, setActiveModuleId] = useState('rates-of-reaction')
+  const module = getModule(activeModuleId)
+  const allModules = getAllModules()
   const activeModules = getItem(STORAGE_KEYS.ACTIVE_MODULES, module.reactions.map(r => r.id))
 
   // Simulate loading (fonts, etc.)
@@ -88,6 +90,9 @@ export default function App() {
         {currentScreen === SCREENS.FRONT && (
           <FrontPage
             module={module}
+            allModules={allModules}
+            activeModuleId={activeModuleId}
+            onModuleChange={setActiveModuleId}
             onStart={handleStart}
             activeModules={activeModules}
           />

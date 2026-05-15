@@ -74,6 +74,47 @@ export function getSprite(type, color, radius, label, shape = 'circle') {
       ctx.stroke()
       break
 
+    case 'cracked':
+      // Denatured enzyme: irregular blob with crack lines
+      // Draw a wobbly, misshapen circle (unfolded protein)
+      ctx.beginPath()
+      const points = 12
+      for (let i = 0; i <= points; i++) {
+        const angle = (Math.PI * 2 / points) * i
+        // Irregular radius — wobbles between 70-100% of original
+        const wobble = 0.7 + 0.3 * Math.abs(Math.sin(angle * 3.7 + 1.2))
+        const r = radius * wobble
+        const px = cx + r * Math.cos(angle)
+        const py = cy + r * Math.sin(angle)
+        if (i === 0) ctx.moveTo(px, py)
+        else ctx.lineTo(px, py)
+      }
+      ctx.closePath()
+      ctx.fill()
+      ctx.stroke()
+
+      // Draw crack lines across the surface
+      ctx.strokeStyle = 'rgba(40, 40, 40, 0.6)'
+      ctx.lineWidth = 1.5
+      // Main crack: top-left to bottom-right
+      ctx.beginPath()
+      ctx.moveTo(cx - radius * 0.5, cy - radius * 0.6)
+      ctx.lineTo(cx - radius * 0.1, cy - radius * 0.1)
+      ctx.lineTo(cx + radius * 0.15, cy + radius * 0.05)
+      ctx.lineTo(cx + radius * 0.5, cy + radius * 0.55)
+      ctx.stroke()
+      // Branch crack
+      ctx.beginPath()
+      ctx.moveTo(cx - radius * 0.1, cy - radius * 0.1)
+      ctx.lineTo(cx + radius * 0.4, cy - radius * 0.3)
+      ctx.stroke()
+      // Small branch
+      ctx.beginPath()
+      ctx.moveTo(cx + radius * 0.15, cy + radius * 0.05)
+      ctx.lineTo(cx - radius * 0.25, cy + radius * 0.4)
+      ctx.stroke()
+      break
+
     case 'square':
       const half = radius * 0.8
       ctx.fillRect(cx - half, cy - half, half * 2, half * 2)
@@ -128,8 +169,21 @@ function drawStar(ctx, cx, cy, spikes, outerRadius, innerRadius) {
 }
 
 // Pre-render all particle types for a reaction
-export function preRenderSprites(particleTypes) {
+export function preRenderSprites(particleTypes, denatureConfig) {
   for (const pt of particleTypes) {
     getSprite(pt.type, pt.color, pt.radius || 12, pt.label, pt.shape || 'circle')
+  }
+  // Pre-render denatured enzyme sprite if applicable
+  if (denatureConfig) {
+    const enzType = particleTypes.find(pt => pt.shape === 'star')
+    if (enzType) {
+      getSprite(
+        enzType.type + '_DEN',
+        denatureConfig.denaturedColor,
+        enzType.radius || 12,
+        denatureConfig.denaturedLabel,
+        denatureConfig.denaturedShape
+      )
+    }
   }
 }
