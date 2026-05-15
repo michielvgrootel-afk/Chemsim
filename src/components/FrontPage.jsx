@@ -7,13 +7,19 @@ export function FrontPage({ module, allModules, activeModuleId, onModuleChange, 
 
   if (!module) return null
 
-  const reactions = module.reactions.filter((_, idx) => {
+  const filteredReactions = module.reactions.filter((_, idx) => {
     // Filter by active modules if set
     if (activeModules && activeModules.length > 0) {
       return activeModules.includes(module.reactions[idx].id)
     }
     return true
   })
+
+  // Fallback: if the stored "active reactions" list is stale and matches
+  // none of the current module's reactions (e.g. user switched modules,
+  // or scenarios were renamed/removed in an update), show all reactions
+  // for this module rather than rendering an empty/undefined card.
+  const reactions = filteredReactions.length > 0 ? filteredReactions : module.reactions
 
   const currentReaction = reactions[selectedReaction] || reactions[0]
 

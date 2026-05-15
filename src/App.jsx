@@ -19,7 +19,13 @@ export default function App() {
   const [activeModuleId, setActiveModuleId] = useState('rates-of-reaction')
   const module = getModule(activeModuleId)
   const allModules = getAllModules()
-  const activeModules = getItem(STORAGE_KEYS.ACTIVE_MODULES, module.reactions.map(r => r.id))
+  const storedActive = getItem(STORAGE_KEYS.ACTIVE_MODULES, null)
+  // The stored "active reactions" list is module-agnostic — when the user
+  // switches modules, the saved IDs may not match any reaction in the
+  // current module. In that case, fall back to enabling all reactions for
+  // this module so the UI doesn't render an empty reaction picker.
+  const matchedActive = storedActive ? module.reactions.map(r => r.id).filter(id => storedActive.includes(id)) : null
+  const activeModules = (matchedActive && matchedActive.length > 0) ? matchedActive : module.reactions.map(r => r.id)
 
   // Simulate loading (fonts, etc.)
   useEffect(() => {
