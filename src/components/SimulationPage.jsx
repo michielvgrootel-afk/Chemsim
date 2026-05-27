@@ -154,6 +154,7 @@ export function SimulationPage({
         quiz={quiz}
         studentName={studentName}
         reactionId={reaction.id}
+        moduleName={module.name}
         onClose={() => setShowQuiz(false)}
       />
 
