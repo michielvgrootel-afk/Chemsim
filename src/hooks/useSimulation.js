@@ -400,13 +400,11 @@ export function useSimulation(reaction, canvasRef) {
         }
       }
 
-      // Stirring
+      // Stirring — applied every frame so the sweeping spoon motion is
+      // continuous and looks like a real fluid being mixed. The previous
+      // throttled-jitter approach is gone (only added wiggle, not flow).
       if (vars.stirring) {
-        const now = elapsed
-        if (now - lastStirRef.current > 0.15) {
-          lastStirRef.current = now
-          applyStirring(particles, 1)
-        }
+        applyStirring(particles, dt, elapsed, width, height, 1)
       }
     }
 

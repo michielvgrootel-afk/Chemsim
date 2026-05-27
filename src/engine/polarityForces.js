@@ -144,12 +144,73 @@ export function applyPolarityForces(particles, grid, dt, config = {}) {
   }
 }
 
-// Apply stirring: random velocity bursts to all particles
-export function applyStirring(particles, strength = 1) {
+// Apply stirring: simulates a spoon sweeping in a circle around the canvas.
+// Particles near the spoon get dragged along in its direction of travel
+// (creating a coherent "sweeping" flow) AND swirled around the spoon's
+// position (local vortex). Together this looks like a fluid being properly
+// stirred rather than the previous random-jitter approach.
+//
+// Must be called every frame with dt/elapsed/canvas dims so the spoon
+// position can advance continuously and forces are frame-rate stable.
+export function applyStirring(particles, dt, elapsed, canvasWidth, canvasHeight, strength = 1) {
+  if (!particles.length || !canvasWidth || !canvasHeight) return
+
+  const cx = canvasWidth / 2
+  const cy = canvasHeight / 2
+
+  // Two interleaved spoons sweeping at different rates/radii so the flow
+  // pattern is rich rather than a single uniform vortex.
+  const spoons = [
+    { radius: Math.min(canvasWidth, canvasHeight) * 0.30, rate: 2.4, phase: 0 },
+    { radius: Math.min(canvasWidth, canvasHeight) * 0.18, rate: -3.2, phase: Math.PI },
+  ]
+
+  const influence = Math.max(canvasWidth, canvasHeight) * 0.45
+  const influenceSq = influence * influence
+
+  for (const spoon of spoons) {
+    const angle = elapsed * spoon.rate + spoon.phase
+    const spoonX = cx + Math.cos(angle) * spoon.radius
+    const spoonY = cy + Math.sin(angle) * spoon.radius
+    // Spoon tip's instantaneous velocity (tangent to its sweep circle)
+    const spoonSpeed = Math.abs(spoon.radius * spoon.rate)
+    const dirX = -Math.sin(angle) * Math.sign(spoon.rate)
+    const dirY =  Math.cos(angle) * Math.sign(spoon.rate)
+
+    for (const p of particles) {
+      if (!p.alive || p.bound) continue
+
+      const dx = p.x - spoonX
+      const dy = p.y - spoonY
+      const distSq = dx * dx + dy * dy
+      if (distSq > influenceSq) continue
+
+      const dist = Math.sqrt(distSq) || 1
+      const falloff = 1 - dist / influence
+      const k = falloff * falloff * strength
+
+      // 1. Drag along with the spoon's direction of travel — this is the
+      //    primary "sweeping" sensation.
+      p.vx += dirX * spoonSpeed * k * 0.9 * dt
+      p.vy += dirY * spoonSpeed * k * 0.9 * dt
+
+      // 2. Tangential swirl around the spoon — local vortex that mixes
+      //    nearby particles around each other.
+      const nx = dx / dist
+      const ny = dy / dist
+      const swirl = 220 * k * dt * Math.sign(spoon.rate)
+      p.vx += -ny * swirl
+      p.vy +=  nx * swirl
+    }
+  }
+
+  // Tiny random turbulence on top so the flow doesn't look perfectly
+  // mechanical — keeps the mixing chaotic enough to look fluid.
+  const jitter = 25 * strength * dt
   for (const p of particles) {
     if (!p.alive || p.bound) continue
-    p.vx += (Math.random() - 0.5) * 80 * strength
-    p.vy += (Math.random() - 0.5) * 80 * strength
+    p.vx += (Math.random() - 0.5) * jitter * 60
+    p.vy += (Math.random() - 0.5) * jitter * 60
   }
 }
 
