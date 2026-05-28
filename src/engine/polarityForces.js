@@ -144,73 +144,101 @@ export function applyPolarityForces(particles, grid, dt, config = {}) {
   }
 }
 
-// Apply stirring: simulates a spoon sweeping in a circle around the canvas.
-// Particles near the spoon get dragged along in its direction of travel
-// (creating a coherent "sweeping" flow) AND swirled around the spoon's
-// position (local vortex). Together this looks like a fluid being properly
-// stirred rather than the previous random-jitter approach.
+// Apply stirring: aggressive emulsification via a global turbulent flow
+// field, strong enough to overcome buoyancy (oil rising) and polarity
+// repulsion (water/oil pushing apart). Result: the layers genuinely
+// break apart into droplets dispersed through each other.
 //
-// Must be called every frame with dt/elapsed/canvas dims so the spoon
-// position can advance continuously and forces are frame-rate stable.
+// Model:
+//   1. Two large counter-rotating gyres (left half clockwise, right half
+//      counter-clockwise) sample each particle's position and produce a
+//      target velocity. Wherever a particle is, there's a strong
+//      directional pull. Crossing the midline flips the rotation, which
+//      is exactly what mixes vertical layers — oil from the top gets
+//      carried down the right side, water gets carried up the left.
+//   2. The gyre centres wobble over time so the flow doesn't reach a
+//      static fixed point.
+//   3. Velocities are STEERED toward the target (blended), not just
+//      added — this dominates other forces instead of being eaten by
+//      damping.
+//   4. Small random turbulence on top to break perfect symmetry.
+//
+// Must be called every frame with dt/elapsed/canvas dims.
 export function applyStirring(particles, dt, elapsed, canvasWidth, canvasHeight, strength = 1) {
   if (!particles.length || !canvasWidth || !canvasHeight) return
 
-  const cx = canvasWidth / 2
-  const cy = canvasHeight / 2
+  const W = canvasWidth
+  const H = canvasHeight
+  const halfW = W / 2
 
-  // Two interleaved spoons sweeping at different rates/radii so the flow
-  // pattern is rich rather than a single uniform vortex.
-  const spoons = [
-    { radius: Math.min(canvasWidth, canvasHeight) * 0.30, rate: 2.4, phase: 0 },
-    { radius: Math.min(canvasWidth, canvasHeight) * 0.18, rate: -3.2, phase: Math.PI },
-  ]
+  // Target flow speed — px/s. Tuned to clearly beat buoyancy (~96 px/s
+  // steady-state) and polarity repulsion (~50 px/s steady-state) so the
+  // stirring visibly dominates.
+  const targetSpeed = 360 * strength
 
-  const influence = Math.max(canvasWidth, canvasHeight) * 0.45
-  const influenceSq = influence * influence
+  // Gyre centres wobble in small circles so the flow pattern isn't static.
+  const wobbleR = Math.min(W, H) * 0.08
+  const wobble1X = Math.cos(elapsed * 1.3) * wobbleR
+  const wobble1Y = Math.sin(elapsed * 1.7) * wobbleR
+  const wobble2X = Math.cos(elapsed * 1.5 + Math.PI) * wobbleR
+  const wobble2Y = Math.sin(elapsed * 1.1 + Math.PI) * wobbleR
 
-  for (const spoon of spoons) {
-    const angle = elapsed * spoon.rate + spoon.phase
-    const spoonX = cx + Math.cos(angle) * spoon.radius
-    const spoonY = cy + Math.sin(angle) * spoon.radius
-    // Spoon tip's instantaneous velocity (tangent to its sweep circle)
-    const spoonSpeed = Math.abs(spoon.radius * spoon.rate)
-    const dirX = -Math.sin(angle) * Math.sign(spoon.rate)
-    const dirY =  Math.cos(angle) * Math.sign(spoon.rate)
+  // Frame-rate-stable steering: blend ~85% per second toward target.
+  // Solves for lerp such that (1 - lerp)^(1/dt) ≈ exp(-rate)
+  const steerRate = 7 * strength
+  const lerp = 1 - Math.exp(-steerRate * dt)
 
-    for (const p of particles) {
-      if (!p.alive || p.bound) continue
-
-      const dx = p.x - spoonX
-      const dy = p.y - spoonY
-      const distSq = dx * dx + dy * dy
-      if (distSq > influenceSq) continue
-
-      const dist = Math.sqrt(distSq) || 1
-      const falloff = 1 - dist / influence
-      const k = falloff * falloff * strength
-
-      // 1. Drag along with the spoon's direction of travel — this is the
-      //    primary "sweeping" sensation.
-      p.vx += dirX * spoonSpeed * k * 0.9 * dt
-      p.vy += dirY * spoonSpeed * k * 0.9 * dt
-
-      // 2. Tangential swirl around the spoon — local vortex that mixes
-      //    nearby particles around each other.
-      const nx = dx / dist
-      const ny = dy / dist
-      const swirl = 220 * k * dt * Math.sign(spoon.rate)
-      p.vx += -ny * swirl
-      p.vy +=  nx * swirl
-    }
-  }
-
-  // Tiny random turbulence on top so the flow doesn't look perfectly
-  // mechanical — keeps the mixing chaotic enough to look fluid.
-  const jitter = 25 * strength * dt
   for (const p of particles) {
     if (!p.alive || p.bound) continue
-    p.vx += (Math.random() - 0.5) * jitter * 60
-    p.vy += (Math.random() - 0.5) * jitter * 60
+
+    // Determine which gyre this particle is in, and its position relative
+    // to that gyre's centre (normalized to [-1, 1]).
+    let gyreCx, gyreCy, sign
+    if (p.x < halfW) {
+      gyreCx = halfW / 2 + wobble1X
+      gyreCy = H / 2 + wobble1Y
+      sign = 1   // clockwise on the left half
+    } else {
+      gyreCx = halfW + halfW / 2 + wobble2X
+      gyreCy = H / 2 + wobble2Y
+      sign = -1  // counter-clockwise on the right half
+    }
+    const nx = (p.x - gyreCx) / (halfW / 2)
+    const ny = (p.y - gyreCy) / (H / 2)
+
+    // Tangential velocity (perpendicular to radius) — this is the
+    // rotation. Magnitude tapers slightly toward the centre so flow at
+    // the gyre core isn't infinite-fast.
+    const r = Math.sqrt(nx * nx + ny * ny)
+    const intensity = Math.min(1, 0.25 + r * 0.9)
+    let tx = -ny * sign * intensity
+    let ty =  nx * sign * intensity
+
+    // Cross-flow perturbation — extra sin-wave term that breaks symmetry
+    // and pushes particles between the two gyres, dramatically increasing
+    // mixing across the midline.
+    const phase = elapsed * 2.2
+    tx += 0.55 * Math.sin(p.y / H * Math.PI * 2 + phase)
+    ty += 0.55 * Math.cos(p.x / W * Math.PI * 2 - phase)
+
+    // Normalize the direction and scale to target speed.
+    const mag = Math.sqrt(tx * tx + ty * ty) || 1
+    const fx = (tx / mag) * targetSpeed
+    const fy = (ty / mag) * targetSpeed
+
+    // Steer toward the target velocity (blended).
+    p.vx = p.vx * (1 - lerp) + fx * lerp
+    p.vy = p.vy * (1 - lerp) + fy * lerp
+  }
+
+  // Random turbulence on top — kicks particles around so the smooth flow
+  // field doesn't lock them into perfect orbits. Strong enough to make
+  // visible chaos but not enough to dominate the gyres.
+  const jitter = 120 * strength * dt
+  for (const p of particles) {
+    if (!p.alive || p.bound) continue
+    p.vx += (Math.random() - 0.5) * jitter
+    p.vy += (Math.random() - 0.5) * jitter
   }
 }
 

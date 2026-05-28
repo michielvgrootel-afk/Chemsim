@@ -31,7 +31,6 @@ export function useSimulation(reaction, canvasRef) {
   const [enzymeStats, setEnzymeStats] = useState(null)
   const [dissolutionStats, setDissolutionStats] = useState(null)
   const clusterCenterRef = useRef(null)
-  const lastStirRef = useRef(0)
   const lastHydrationCheckRef = useRef(0)
 
   const variablesRef = useRef(variables)
