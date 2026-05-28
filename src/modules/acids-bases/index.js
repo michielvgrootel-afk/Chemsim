@@ -5,10 +5,19 @@
 //   C. Buffer demonstration
 //   D. pH scale sandbox
 
+import { strongVsWeakScenario } from './reactions/strong-vs-weak'
+import { neutralizationScenario } from './reactions/neutralization'
+import { bufferScenario } from './reactions/buffer'
 import { phScaleScenario } from './reactions/ph-scale'
 import { acidsBasesQuizzes } from './quiz'
 
+// Pedagogical order: students first see what dissociation looks like,
+// then how acid + base neutralise, then how buffers resist change,
+// then a sandbox to explore the full pH range.
 const reactions = [
+  strongVsWeakScenario,
+  neutralizationScenario,
+  bufferScenario,
   phScaleScenario,
 ]
 
