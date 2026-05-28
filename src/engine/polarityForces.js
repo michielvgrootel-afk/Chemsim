@@ -14,7 +14,9 @@ export function applyPolarityForces(particles, grid, dt, config = {}) {
   const forceRange = config.forceRange || FORCE_RANGE
   const attractStr = config.attractStrength || ATTRACT_STRENGTH
   const repelStr = config.repelStrength || REPEL_STRENGTH
-  const cohesionStr = config.cohesionStrength || COHESION_STRENGTH
+  // Nullish coalescing so callers can pass 0 to fully disable cohesion
+  // (e.g. emulsifier active → no oil-oil clumping).
+  const cohesionStr = config.cohesionStrength ?? COHESION_STRENGTH
   const soluteTypes = config.soluteTypes || []
 
   // Use spatial grid to find nearby pairs efficiently

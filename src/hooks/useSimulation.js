@@ -333,10 +333,19 @@ export function useSimulation(reaction, canvasRef) {
 
     // Apply polarity forces (solubility simulation)
     if (rxn.hasPolarityForces) {
-      applyPolarityForces(particles, grid, dt, {
+      const polarityOpts = {
         soluteTypes: rxn.soluteTypes || [],
         ...rxn.polarityConfig,
-      })
+      }
+      // When emulsifier is active, dramatically weaken oil-oil cohesion so
+      // droplets break apart into the emulsion instead of clumping. This
+      // mirrors what real surfactants do: they reduce the interfacial
+      // tension that holds nonpolar molecules together.
+      if (rxn.emulsifierConfig && vars.emulsifier) {
+        polarityOpts.soluteDamping = (polarityOpts.soluteDamping ?? 0.15) * 0.15
+        polarityOpts.cohesionStrength = 0
+      }
+      applyPolarityForces(particles, grid, dt, polarityOpts)
 
       // Hydration-based dissolution (REVERSIBLE GATING + EXCLUSIVE BONDS):
       //   - Each water "bonds" to its single nearest ion within the shell radius.
