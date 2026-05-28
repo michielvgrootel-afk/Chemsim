@@ -48,7 +48,7 @@ export const oilWaterScenario = {
 
   // Emulsifier configuration \u2014 used by the engine when the toggle is on
   emulsifierConfig: {
-    count: 14,         // how many emulsifier particles to spawn
+    count: 28,         // how many emulsifier particles to spawn
     bondRange: 60,     // px \u2014 search radius for finding oil/water to bind
     bondDistance: 26,  // px \u2014 ideal distance from emulsifier to its partner
     springK: 6,        // spring constant for the bond force
