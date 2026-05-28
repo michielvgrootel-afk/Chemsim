@@ -16,7 +16,9 @@ export function SimulationPage({
   const canvasRef = useRef(null)
   const [particleCounts, setParticleCounts] = useState(() => getDefaultParticleCounts(reaction))
   const [showQuiz, setShowQuiz] = useState(false)
-  const [isPaused, setIsPaused] = useState(false)
+  // Start paused so students can read the annotation, see the initial
+  // particle layout, and click Resume when they're ready.
+  const [isPaused, setIsPaused] = useState(true)
   const lastResetRef = useRef(0)
 
   const {
@@ -41,16 +43,20 @@ export function SimulationPage({
     setParticleCounts(getDefaultParticleCounts(reaction))
   }, [reaction])
 
-  // Initialize simulation when reaction or particle counts change
+  // Initialize simulation when reaction or particle counts change.
+  // After init + reset we PAUSE the loop so students see the starting
+  // configuration before motion begins; they click Resume to start.
   useEffect(() => {
     if (reaction && canvasRef.current) {
       const timer = setTimeout(() => {
         initSimulation(particleCounts)
         reset()
+        pause()
+        setIsPaused(true)
       }, 50)
       return () => clearTimeout(timer)
     }
-  }, [reaction, particleCounts, initSimulation, reset])
+  }, [reaction, particleCounts, initSimulation, reset, pause])
 
   const handlePauseResume = useCallback(() => {
     if (isPaused) {
@@ -68,8 +74,11 @@ export function SimulationPage({
     lastResetRef.current = now
     initSimulation(particleCounts)
     reset()
-    setIsPaused(false)
-  }, [initSimulation, particleCounts, reset])
+    // Reset puts the sim back to its starting state — leave it paused
+    // so students can see the fresh setup before motion begins again.
+    pause()
+    setIsPaused(true)
+  }, [initSimulation, particleCounts, reset, pause])
 
   const quiz = module.getQuiz(reaction.id)
 
