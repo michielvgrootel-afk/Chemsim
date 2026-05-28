@@ -6,6 +6,7 @@ import { renderFrame } from '../engine/renderer'
 import { preRenderSprites, clearSpriteCache } from '../engine/spriteCache'
 import { CatalystSurface } from '../engine/catalystSurface'
 import { applyPolarityForces, applyStirring, calcDissolutionPercent, calcLatticeDissolutionPercent, calcSeparationPercent } from '../engine/polarityForces'
+import { spawnEmulsifiers, despawnEmulsifiers, updateEmulsifierBonds } from '../engine/emulsifier'
 import { SIM_DEFAULTS, GRAPH_CONFIG } from '../utils/constants'
 
 export function useSimulation(reaction, canvasRef) {
@@ -239,6 +240,23 @@ export function useSimulation(reaction, canvasRef) {
 
     const effectiveFloor = catalyst?.active ? catalyst.getEffectiveFloor() : null
 
+    // Handle emulsifier toggle — spawn/despawn amphipathic molecules that
+    // bind oil + water together (used in oil-water scenario).
+    if (rxn.emulsifierConfig) {
+      const ec = rxn.emulsifierConfig
+      const emulType = rxn.particleTypes.find(pt => pt.type === 'EMUL')
+      const existingEmuls = particles.filter(p => p.alive && p.type === 'EMUL')
+      const spawnSpeed = rxn.speedFromTemp ? rxn.speedFromTemp(vars.temperature) * 60 : 60
+
+      if (vars.emulsifier && existingEmuls.length === 0 && emulType) {
+        // Toggled ON — spawn fresh emulsifiers
+        spawnEmulsifiers(particles, createParticle, emulType, ec.count, width, height, spawnSpeed)
+      } else if (!vars.emulsifier && existingEmuls.length > 0) {
+        // Toggled OFF — kill them and unbond their partners
+        despawnEmulsifiers(particles)
+      }
+    }
+
     // Update particle speeds based on temperature
     const targetSpeed = rxn.speedFromTemp ? rxn.speedFromTemp(vars.temperature) * 60 : 60
     for (const p of particles) {
@@ -404,6 +422,14 @@ export function useSimulation(reaction, canvasRef) {
       // throttled-jitter approach is gone (only added wiggle, not flow).
       if (vars.stirring) {
         applyStirring(particles, dt, elapsed, width, height, 1)
+      }
+
+      // Emulsifier bond dynamics — every frame, each emulsifier seeks
+      // unclaimed oil + water partners within range and applies a spring
+      // force to keep them at the ideal bond distance. Bonds persist
+      // through stirring, so the mixed state is stable.
+      if (rxn.emulsifierConfig && vars.emulsifier) {
+        updateEmulsifierBonds(particles, grid, dt, rxn.emulsifierConfig)
       }
     }
 

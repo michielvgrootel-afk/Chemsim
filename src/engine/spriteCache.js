@@ -121,6 +121,53 @@ export function getSprite(type, color, radius, label, shape = 'circle') {
       ctx.strokeRect(cx - half, cy - half, half * 2, half * 2)
       break
 
+    case 'emulsifier': {
+      // Amphipathic molecule — drawn pointing RIGHT in canonical orientation
+      // (renderer rotates it via p.angle so the tail points at bonded oil).
+      // Layout (from left to right):
+      //   - Round polar HEAD (blue, hydrophilic) — left side
+      //   - Three-segment wiggly TAIL (orange, hydrophobic) — right side
+      const headR = radius * 0.55
+      const headX = cx - radius * 0.4
+      const tailEndX = cx + radius * 0.95
+      const segLen = (tailEndX - (headX + headR)) / 3
+
+      // Tail — drawn first so the head overlaps it slightly
+      ctx.strokeStyle = '#f0913a'
+      ctx.lineWidth = Math.max(2.5, radius * 0.32)
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+      ctx.beginPath()
+      let tx = headX + headR
+      let ty = cy
+      ctx.moveTo(tx, ty)
+      // Zig-zag tail (visible kinks suggest hydrocarbon chain)
+      ctx.lineTo(tx + segLen, cy - radius * 0.18)
+      ctx.lineTo(tx + segLen * 2, cy + radius * 0.18)
+      ctx.lineTo(tailEndX, cy - radius * 0.05)
+      ctx.stroke()
+
+      // Polar head — blue circle with white stroke
+      ctx.fillStyle = '#5fa8f0'
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)'
+      ctx.lineWidth = 1.5
+      ctx.beginPath()
+      ctx.arc(headX, cy, headR, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.stroke()
+
+      // Tiny "+" symbol on head to suggest partial-positive polar character
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)'
+      ctx.lineWidth = 1.4
+      ctx.beginPath()
+      ctx.moveTo(headX - headR * 0.45, cy)
+      ctx.lineTo(headX + headR * 0.45, cy)
+      ctx.moveTo(headX, cy - headR * 0.45)
+      ctx.lineTo(headX, cy + headR * 0.45)
+      ctx.stroke()
+      break
+    }
+
     default: // circle
       ctx.beginPath()
       ctx.arc(cx, cy, radius, 0, Math.PI * 2)

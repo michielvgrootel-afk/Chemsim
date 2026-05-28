@@ -29,6 +29,12 @@ export function applyPolarityForces(particles, grid, dt, config = {}) {
     // Skip catalyst-bound particles, but allow lattice ions (water must feel their pull)
     if ((a.bound && !a.latticeIon) || (b.bound && !b.latticeIon)) continue
 
+    // Neutral particles (polarity 0, e.g. emulsifier) have no ion-dipole or
+    // like-dissolves-like forces — their interactions are handled by other
+    // systems (e.g. the bond-spring in emulsifier.js). This prevents the
+    // emulsifier from being repelled by both water and oil simultaneously.
+    if (a.polarity === 0 || b.polarity === 0) continue
+
     if (latticeMode) {
       const aIon = a.latticeIon
       const bIon = b.latticeIon

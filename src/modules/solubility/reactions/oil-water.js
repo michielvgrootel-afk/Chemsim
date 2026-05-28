@@ -13,6 +13,10 @@ export const oilWaterScenario = {
   particleTypes: [
     { type: 'OIL', label: 'Oil', color: '#f0913a', shape: 'hexagon', radius: 14, mass: 0.9, polarity: -0.8, buoyancy: 0.15 },
     { type: 'H2O', label: 'H\u2082O', color: '#8ab4f0', shape: 'diamond', radius: 10, mass: 1.0, polarity: 0.85, buoyancy: -0.05 },
+    // Emulsifier (soap) \u2014 amphipathic molecule. Polarity 0 because the
+    // molecule is neither uniformly polar nor nonpolar; the binding system
+    // handles its dual character explicitly (head bonds water, tail bonds oil).
+    { type: 'EMUL', label: '', color: '#5fa8f0', shape: 'emulsifier', radius: 13, mass: 1.0, polarity: 0, buoyancy: 0 },
   ],
 
   variables: [
@@ -32,7 +36,25 @@ export const oilWaterScenario = {
       icon: 'zap',
       tooltip: 'Stirring temporarily mixes oil and water, but they always separate again.',
     },
+    {
+      id: 'emulsifier',
+      label: 'Emulsifier (soap)',
+      type: 'toggle',
+      default: false,
+      icon: 'flask',
+      tooltip: 'Adds amphipathic emulsifier molecules. The polar head bonds water, the nonpolar tail bonds oil \u2014 keeping them mixed even after stirring stops.',
+    },
   ],
+
+  // Emulsifier configuration \u2014 used by the engine when the toggle is on
+  emulsifierConfig: {
+    count: 14,         // how many emulsifier particles to spawn
+    bondRange: 60,     // px \u2014 search radius for finding oil/water to bind
+    bondDistance: 26,  // px \u2014 ideal distance from emulsifier to its partner
+    springK: 6,        // spring constant for the bond force
+    maxOilPerEmul: 2,  // up to 2 oil partners per emulsifier
+    maxWaterPerEmul: 2, // up to 2 water partners per emulsifier
+  },
 
   hasPolarityForces: true,
   soluteTypes: ['OIL'],
@@ -80,7 +102,12 @@ export const oilWaterScenario = {
     {
       id: 'stirring-active',
       text: 'Stirring temporarily mixes them into an emulsion \u2014 but watch what happens when you stop! Without an emulsifier (like soap), they always separate again.',
-      condition: (vars) => vars.stirring,
+      condition: (vars) => vars.stirring && !vars.emulsifier,
+    },
+    {
+      id: 'emulsifier-active',
+      text: 'The emulsifier molecules have a polar head (water-loving) and a nonpolar tail (oil-loving). Each one bridges oil droplets to water \u2014 the mixture stays mixed even after stirring stops. This is how soap cleans grease!',
+      condition: (vars) => vars.emulsifier,
     },
     {
       id: 'cold',

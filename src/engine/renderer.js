@@ -49,13 +49,21 @@ export function renderFrame(ctx, canvasWidth, canvasHeight, particles, annotatio
     // Draw cached sprite at logical size (sprite may be rendered at DPR resolution)
     const sprite = getSprite(p.type, p.color, p.radius, p.label, p.shape || 'circle')
     const logicalSize = p.radius * 2 + 4
-    ctx.drawImage(
-      sprite,
-      p.x - logicalSize / 2,
-      p.y - logicalSize / 2,
-      logicalSize,
-      logicalSize
-    )
+    if (typeof p.angle === 'number') {
+      // Rotate around particle centre — used by emulsifiers so their tail
+      // points at the bonded oil particle.
+      ctx.translate(p.x, p.y)
+      ctx.rotate(p.angle)
+      ctx.drawImage(sprite, -logicalSize / 2, -logicalSize / 2, logicalSize, logicalSize)
+    } else {
+      ctx.drawImage(
+        sprite,
+        p.x - logicalSize / 2,
+        p.y - logicalSize / 2,
+        logicalSize,
+        logicalSize
+      )
+    }
 
     // Draw tether line for bound particles
     if (p.bound && catalystSurface?.active) {
