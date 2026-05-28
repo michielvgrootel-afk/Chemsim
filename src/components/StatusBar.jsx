@@ -1,6 +1,15 @@
 import React from 'react'
 
-export function StatusBar({ stats, enzymeStats, dissolutionStats, onTakeQuiz }) {
+// Map pH to a colour band for the meter (visual familiarity with universal indicator)
+function phColor(ph) {
+  if (ph < 3) return '#e05555'   // strong acid — red
+  if (ph < 6) return '#f0913a'   // weak acid — orange
+  if (ph < 8) return '#3dba7e'   // neutral — green
+  if (ph < 11) return '#9b6ef0'  // weak base — purple
+  return '#4f9cf0'                // strong base — blue
+}
+
+export function StatusBar({ stats, enzymeStats, dissolutionStats, phStats, onTakeQuiz }) {
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60)
     const s = Math.floor(seconds % 60)
@@ -12,7 +21,34 @@ export function StatusBar({ stats, enzymeStats, dissolutionStats, onTakeQuiz }) 
       style={{ background: '#1e2535', border: '1px solid #363c4a' }}>
 
       <div className="flex items-center gap-6">
-        {dissolutionStats ? (
+        {phStats ? (
+          <>
+            <div className="flex items-center gap-2">
+              <span className="text-xs uppercase tracking-wider" style={{ color: '#6b7585' }}>pH:</span>
+              <span className="text-sm font-mono font-semibold" style={{ color: phColor(phStats.ph) }}>
+                {phStats.ph.toFixed(1)}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs uppercase tracking-wider" style={{ color: '#6b7585' }}>H⁺:</span>
+              <span className="text-sm font-mono font-semibold" style={{ color: '#f0913a' }}>
+                {phStats.hCount}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs uppercase tracking-wider" style={{ color: '#6b7585' }}>OH⁻:</span>
+              <span className="text-sm font-mono font-semibold" style={{ color: '#56c0e0' }}>
+                {phStats.ohCount}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs uppercase tracking-wider" style={{ color: '#6b7585' }}>Time:</span>
+              <span className="text-sm font-mono font-semibold" style={{ color: '#e8eaf0' }}>
+                {formatTime(stats.elapsed)}
+              </span>
+            </div>
+          </>
+        ) : dissolutionStats ? (
           <>
             <div className="flex items-center gap-2">
               <span className="text-xs uppercase tracking-wider" style={{ color: '#6b7585' }}>

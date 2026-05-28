@@ -7,6 +7,7 @@ import { preRenderSprites, clearSpriteCache } from '../engine/spriteCache'
 import { CatalystSurface } from '../engine/catalystSurface'
 import { applyPolarityForces, applyStirring, calcDissolutionPercent, calcLatticeDissolutionPercent, calcSeparationPercent } from '../engine/polarityForces'
 import { spawnEmulsifiers, despawnEmulsifiers, updateEmulsifierBonds } from '../engine/emulsifier'
+import { calcPH, updateIndicators, processPendingSpawns } from '../engine/acidBaseUtils'
 import { SIM_DEFAULTS, GRAPH_CONFIG } from '../utils/constants'
 
 export function useSimulation(reaction, canvasRef) {
@@ -33,6 +34,10 @@ export function useSimulation(reaction, canvasRef) {
   const [dissolutionStats, setDissolutionStats] = useState(null)
   const clusterCenterRef = useRef(null)
   const lastHydrationCheckRef = useRef(0)
+  // Queue of pending burst-spawn requests from "Add drop" buttons
+  // (drained at the top of each update tick by processPendingSpawns).
+  const pendingSpawnsRef = useRef([])
+  const [phStats, setPhStats] = useState(null)
 
   const variablesRef = useRef(variables)
   variablesRef.current = variables
@@ -51,7 +56,7 @@ export function useSimulation(reaction, canvasRef) {
 
     resetParticleIds()
     clearSpriteCache()
-    preRenderSprites(rxn.particleTypes, rxn.denature)
+    preRenderSprites(rxn.particleTypes, rxn.denature, rxn.indicatorConfig)
 
     const canvas = canvasRef.current
     // Use logical dimensions (not DPR-scaled physical pixels)
@@ -203,8 +208,19 @@ export function useSimulation(reaction, canvasRef) {
     setAllDenatured(false)
     setEnzymeStats(null)
     setDissolutionStats(null)
+    setPhStats(null)
     lastHydrationCheckRef.current = 0
+    pendingSpawnsRef.current = []
   }, [canvasRef])
+
+  // "Add drop" button click handler — queues a burst-spawn request that
+  // the next update tick will fulfil. Capped at 3 pending bursts to
+  // prevent rapid-click spam from flooding the simulation.
+  const requestSpawn = useCallback((id, spawnSpec) => {
+    if (!spawnSpec) return
+    if (pendingSpawnsRef.current.length >= 3) return
+    pendingSpawnsRef.current.push(spawnSpec)
+  }, [])
 
   const update = useCallback((dt, elapsed) => {
     const particles = particlesRef.current
@@ -217,6 +233,13 @@ export function useSimulation(reaction, canvasRef) {
     // Use logical dimensions (not DPR-scaled physical pixels)
     const width = canvas?._logicalWidth || SIM_DEFAULTS.canvasWidth
     const height = canvas?._logicalHeight || SIM_DEFAULTS.canvasHeight
+
+    // Drain any pending "Add drop" burst requests (queued by button clicks).
+    // Spawned particles get picked up by the spatial grid rebuild below.
+    if (pendingSpawnsRef.current.length > 0) {
+      const dropSpeed = rxn.speedFromTemp ? rxn.speedFromTemp(vars.temperature) * 60 : 60
+      processPendingSpawns(pendingSpawnsRef, particles, createParticle, rxn, { width, height }, dropSpeed)
+    }
 
     // Handle catalyst surface toggle
     const catalyst = catalystRef.current
@@ -518,7 +541,11 @@ export function useSimulation(reaction, canvasRef) {
 
           // Remove reactants (unless preserved as catalyst)
           if (rule.preserveCatalyst) {
-            const catalystType = rxn.particleTypes.find(pt => pt.shape === 'star')?.type
+            // Prefer an explicit catalystType on the rule (used by the
+            // acid-base module with water as the dummy catalyst); fall back
+            // to the legacy "star-shape sniff" for fermentation enzymes.
+            const catalystType = rule.catalystType
+              || rxn.particleTypes.find(pt => pt.shape === 'star')?.type
             if (particleA.type === catalystType) {
               particleB.alive = false
             } else {
@@ -713,6 +740,25 @@ export function useSimulation(reaction, canvasRef) {
         }
       }
 
+      // Acid-base: compute pH + repaint indicator particles based on the
+      // global pH. Indicator colour swap is cheap (only mutates particles
+      // whose colour actually changes) and the sprite cache pre-renders
+      // every band at init time so there's no per-frame regeneration.
+      if (rxn.phConfig) {
+        const ph = calcPH(particlesRef.current, rxn.phConfig)
+        let h = 0, oh = 0
+        for (const p of particlesRef.current) {
+          if (!p.alive) continue
+          if (p.type === 'H') h++
+          else if (p.type === 'OH') oh++
+        }
+        setPhStats({ ph, hCount: h, ohCount: oh })
+        point.pH = Math.round(ph * 10) / 10
+        if (rxn.indicatorConfig) {
+          updateIndicators(particlesRef.current, ph, rxn.indicatorConfig)
+        }
+      }
+
       graphDataRef.current = [...graphDataRef.current.slice(-GRAPH_CONFIG.maxDataPoints), point]
       setGraphData([...graphDataRef.current])
     }
@@ -723,8 +769,10 @@ export function useSimulation(reaction, canvasRef) {
       setAllConsumed(true)
     }
 
-    // Update annotation
-    const annotation = getActiveAnnotation(rxn, vars, allConsumed, allDenatured, dissolutionStats)
+    // Update annotation — merge all available stats so condition functions
+    // can read dissolutionPercent, separationPercent, ph, hCount, ohCount.
+    const combinedStats = { ...(dissolutionStats || {}), ...(phStats || {}) }
+    const annotation = getActiveAnnotation(rxn, vars, allConsumed, allDenatured, combinedStats)
     setActiveAnnotation(annotation)
 
     // Periodic stats update to React state
@@ -733,7 +781,7 @@ export function useSimulation(reaction, canvasRef) {
       reactionRate: Math.round(statsRef.current.reactionRate * 10) / 10,
       elapsed: Math.round(elapsed * 10) / 10,
     })
-  }, [canvasRef, allConsumed, allDenatured, dissolutionStats])
+  }, [canvasRef, allConsumed, allDenatured, dissolutionStats, phStats])
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current
@@ -769,6 +817,8 @@ export function useSimulation(reaction, canvasRef) {
     allConsumed,
     enzymeStats,
     dissolutionStats,
+    phStats,
+    requestSpawn,
     initSimulation,
     update,
     draw,

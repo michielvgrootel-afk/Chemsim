@@ -216,7 +216,7 @@ function drawStar(ctx, cx, cy, spikes, outerRadius, innerRadius) {
 }
 
 // Pre-render all particle types for a reaction
-export function preRenderSprites(particleTypes, denatureConfig) {
+export function preRenderSprites(particleTypes, denatureConfig, indicatorConfig) {
   for (const pt of particleTypes) {
     getSprite(pt.type, pt.color, pt.radius || 12, pt.label, pt.shape || 'circle')
   }
@@ -231,6 +231,23 @@ export function preRenderSprites(particleTypes, denatureConfig) {
         denatureConfig.denaturedLabel,
         denatureConfig.denaturedShape
       )
+    }
+  }
+  // Pre-render indicator colour bands so the runtime colour swap doesn't
+  // trigger a per-frame sprite generation (which would jank a frame the
+  // first time each band appears).
+  if (indicatorConfig && indicatorConfig.type && indicatorConfig.thresholds) {
+    const indType = particleTypes.find(pt => pt.type === indicatorConfig.type)
+    if (indType) {
+      for (const band of indicatorConfig.thresholds) {
+        getSprite(
+          indType.type,
+          band.color,
+          indType.radius || 12,
+          band.label !== undefined ? band.label : indType.label,
+          indType.shape || 'circle',
+        )
+      }
     }
   }
 }

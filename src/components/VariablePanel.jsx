@@ -1,12 +1,14 @@
-import React from 'react'
+import React, { useRef, useState } from 'react'
 
 const ICONS = {
   thermometer: '\uD83C\uDF21\uFE0F',
   flask: '\u2697\uFE0F',
   zap: '\u26A1',
+  droplet: '\uD83D\uDCA7',
+  plus: '\u2795',
 }
 
-export function VariablePanel({ variables, values, onUpdate, particleCounts, onParticleCountsChange, particleTypes, initialRatio, maxParticleCount = 40, activationEnergyKJ, activationEnergyWithCatalystKJ }) {
+export function VariablePanel({ variables, values, onUpdate, onAction, particleCounts, onParticleCountsChange, particleTypes, initialRatio, maxParticleCount = 40, activationEnergyKJ, activationEnergyWithCatalystKJ }) {
   if (!variables) return null
 
   // Build per-type sliders from initialRatio (only reactant types)
@@ -52,6 +54,8 @@ export function VariablePanel({ variables, values, onUpdate, particleCounts, onP
         <div key={v.id} className="p-3 rounded-lg" style={{ background: '#2a2f3a' }}>
           {v.type === 'toggle' ? (
             <ToggleControl variable={v} value={values[v.id]} onUpdate={onUpdate} />
+          ) : v.type === 'button' ? (
+            <ButtonControl variable={v} particleTypes={particleTypes} onAction={onAction} />
           ) : (
             <SliderControl variable={v} value={values[v.id]} onUpdate={onUpdate} />
           )}
@@ -150,6 +154,51 @@ function ActivationEnergyCard({ activationEnergyKJ, activationEnergyWithCatalyst
           </p>
         )}
       </div>
+    </div>
+  )
+}
+
+function ButtonControl({ variable, particleTypes, onAction }) {
+  const v = variable
+  const [cooling, setCooling] = useState(false)
+  const lastFireRef = useRef(0)
+  const cooldown = v.cooldownMs || 400
+
+  // Pick the accent colour from the particle type the button spawns
+  const spawnType = v.spawn?.type
+  const pType = particleTypes?.find(pt => pt.type === spawnType)
+  const accent = pType?.color || '#4f9cf0'
+
+  const handleClick = () => {
+    const now = Date.now()
+    if (now - lastFireRef.current < cooldown) return
+    lastFireRef.current = now
+    if (onAction) onAction(v.id, v.spawn)
+    // Brief visual flash so the click feels responsive
+    setCooling(true)
+    setTimeout(() => setCooling(false), Math.min(cooldown, 250))
+  }
+
+  return (
+    <div>
+      <button
+        onClick={handleClick}
+        className="w-full px-4 py-3 rounded-lg text-sm font-semibold cursor-pointer border-0 transition-all flex items-center justify-center gap-2"
+        style={{
+          background: cooling ? accent : '#1e2535',
+          color: cooling ? '#fff' : '#e8eaf0',
+          border: `2px solid ${accent}`,
+          minHeight: 44,
+          opacity: cooling ? 0.85 : 1,
+        }}
+        aria-label={v.label}
+      >
+        <span className="text-base">{ICONS[v.icon] || ICONS.droplet}</span>
+        <span>{v.label}</span>
+      </button>
+      {v.tooltip && (
+        <p className="text-xs mt-2" style={{ color: '#6b7585' }}>{v.tooltip}</p>
+      )}
     </div>
   )
 }

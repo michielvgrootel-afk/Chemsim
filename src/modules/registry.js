@@ -3,10 +3,12 @@
 
 import { ratesOfReaction } from './rates-of-reaction/index'
 import { solubility } from './solubility/index'
+import { acidsBases } from './acids-bases/index'
 
 export const MODULE_REGISTRY = [
   ratesOfReaction,
   solubility,
+  acidsBases,
 ]
 
 export function getModule(moduleId) {

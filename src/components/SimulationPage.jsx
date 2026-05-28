@@ -27,6 +27,8 @@ export function SimulationPage({
     activeAnnotation,
     enzymeStats,
     dissolutionStats,
+    phStats,
+    requestSpawn,
     initSimulation,
     update,
     draw,
@@ -132,6 +134,7 @@ export function SimulationPage({
             variables={reaction.variables}
             values={variables}
             onUpdate={updateVariable}
+            onAction={requestSpawn}
             particleCounts={particleCounts}
             onParticleCountsChange={setParticleCounts}
             particleTypes={reaction.particleTypes}
@@ -145,7 +148,7 @@ export function SimulationPage({
 
       {/* Status Bar */}
       <div className="px-4 pb-4">
-        <StatusBar stats={stats} enzymeStats={enzymeStats} dissolutionStats={dissolutionStats} onTakeQuiz={() => setShowQuiz(true)} />
+        <StatusBar stats={stats} enzymeStats={enzymeStats} dissolutionStats={dissolutionStats} phStats={phStats} onTakeQuiz={() => setShowQuiz(true)} />
       </div>
 
       {/* Quiz Modal */}
