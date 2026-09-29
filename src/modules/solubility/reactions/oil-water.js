@@ -3,6 +3,8 @@
 
 export const oilWaterScenario = {
   id: 'oil-water',
+  yearGroups: ['MYP5', 'DP1'],
+  syllabusRef: 'S2.2',
   name: 'Oil in Water',
   subtitle: 'Oil does NOT dissolve in H\u2082O',
   description: 'Oil is nonpolar, water is polar. Watch what happens when you try to mix them \u2014 "like dissolves like" means polar and nonpolar don\u2019t mix!',

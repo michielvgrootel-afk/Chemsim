@@ -2,6 +2,7 @@
 
 export const aspirinReaction = {
   id: 'aspirin',
+  yearGroups: ['MYP5'],
   name: 'Hydrolysis of Aspirin',
   subtitle: 'ASA + H\u2082O \u2192 Salicylic Acid + Acetic Acid',
   description: 'Aspirin (acetylsalicylic acid) breaks down in the presence of water, especially at high temperatures and extreme pH.',

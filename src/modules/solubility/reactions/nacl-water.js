@@ -3,6 +3,8 @@
 
 export const naclWaterScenario = {
   id: 'nacl-water',
+  yearGroups: ['MYP5', 'DP1'],
+  syllabusRef: 'S2.1',
   name: 'Salt in Water',
   subtitle: 'NaCl dissolves in H\u2082O',
   description: 'Watch polar water molecules pull apart an ionic crystal lattice. The partial charges on water attract Na\u207a and Cl\u207b ions, breaking the crystal apart.',

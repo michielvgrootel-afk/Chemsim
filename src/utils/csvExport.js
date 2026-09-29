@@ -3,9 +3,11 @@
 export function exportQuizResultsCSV(results) {
   if (!results || results.length === 0) return
 
-  const headers = ['Student Name', 'Module', 'Reaction', 'Score', 'Total Questions', 'Percentage', 'Timestamp']
+  // Only results saved by older versions carry a student name
+  const hasNames = results.some(r => r.studentName)
+  const headers = [...(hasNames ? ['Student Name'] : []), 'Module', 'Reaction', 'Score', 'Total Questions', 'Percentage', 'Timestamp']
   const rows = results.map(r => [
-    escapeCsvField(r.studentName),
+    ...(hasNames ? [escapeCsvField(r.studentName)] : []),
     escapeCsvField(r.module || 'Rates of Reaction'),
     escapeCsvField(r.reaction),
     r.score,

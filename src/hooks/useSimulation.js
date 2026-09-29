@@ -8,6 +8,10 @@ import { CatalystSurface } from '../engine/catalystSurface'
 import { applyPolarityForces, applyStirring, calcDissolutionPercent, calcLatticeDissolutionPercent, calcSeparationPercent } from '../engine/polarityForces'
 import { spawnEmulsifiers, despawnEmulsifiers, updateEmulsifierBonds } from '../engine/emulsifier'
 import { calcPH, updateIndicators, processPendingSpawns } from '../engine/acidBaseUtils'
+import {
+  R, maxPistonX, volumeFromPiston, pistonFromVolume, pressureToKPa,
+  idealPressure2D, wallPerimeter, applyGasAttraction, kPaToPressure2D, vanDerWaalsPressure,
+} from '../engine/gasUtils'
 import { SIM_DEFAULTS, GRAPH_CONFIG } from '../utils/constants'
 
 export function useSimulation(reaction, canvasRef) {
@@ -38,6 +42,9 @@ export function useSimulation(reaction, canvasRef) {
   // (drained at the top of each update tick by processPendingSpawns).
   const pendingSpawnsRef = useRef([])
   const [phStats, setPhStats] = useState(null)
+  // Gas-law scenarios: piston position, smoothed pressure, change tracking
+  const gasStateRef = useRef(null)
+  const [gasStats, setGasStats] = useState(null)
 
   const variablesRef = useRef(variables)
   variablesRef.current = variables
@@ -79,6 +86,8 @@ export function useSimulation(reaction, canvasRef) {
     const spawnFloor = catalystRef.current?.active
       ? catalystRef.current.y - 20
       : height - 20
+
+    gasStateRef.current = null
 
     const particles = []
     const speed = rxn.speedFromTemp ? rxn.speedFromTemp(vars.temperature) : 1
@@ -185,6 +194,29 @@ export function useSimulation(reaction, canvasRef) {
           particles.push(p)
         }
       }
+    } else if (rxn.gasConfig) {
+      // Gas in a piston container: spawn only inside the piston
+      const gc = rxn.gasConfig
+      const pistonX = pistonFromVolume(gc, vars.volume ?? gc.maxVolume, width, height)
+      const radiusScale = vars.realGas ? gc.realRadiusScale : 1
+      for (const [typeId, count] of Object.entries(particleCounts)) {
+        const pType = rxn.particleTypes.find(pt => pt.type === typeId)
+        if (!pType) continue
+        for (let i = 0; i < Math.max(0, count); i++) {
+          const r = (pType.radius || 4) * radiusScale
+          const p = createParticle(pType, r + Math.random() * (pistonX - 2 * r), r + Math.random() * (height - 2 * r))
+          p.radius = r
+          p.setRandomVelocity((speed * 60) / Math.sqrt(p.mass))
+          particles.push(p)
+        }
+      }
+      gasStateRef.current = {
+        pistonX,
+        pressure2D: idealPressure2D(gc, particles.length, vars.temperature, pistonX, height),
+        count: particles.length,
+        lastChange: 0,
+        signature: '',
+      }
     } else {
       // Default spawn (rates-of-reaction style)
       for (const [typeId, count] of Object.entries(particleCounts)) {
@@ -211,6 +243,14 @@ export function useSimulation(reaction, canvasRef) {
     setPhStats(null)
     lastHydrationCheckRef.current = 0
     pendingSpawnsRef.current = []
+
+    // Simulations open paused, so update() hasn't run yet: show the gas
+    // readings and the opening annotation straight away.
+    const initialGasStats = gasStateRef.current
+      ? computeGasStats(rxn.gasConfig, gasStateRef.current, vars.temperature, width, height)
+      : null
+    setGasStats(initialGasStats)
+    setActiveAnnotation(getActiveAnnotation(rxn, vars, false, false, initialGasStats || {}))
   }, [canvasRef])
 
   // "Add drop" button click handler — queues a burst-spawn request that
@@ -234,11 +274,55 @@ export function useSimulation(reaction, canvasRef) {
     const width = canvas?._logicalWidth || SIM_DEFAULTS.canvasWidth
     const height = canvas?._logicalHeight || SIM_DEFAULTS.canvasHeight
 
+    // Gas container: the piston is the right-hand wall. It follows the volume
+    // slider, or (free piston) moves until inside pressure = outside pressure.
+    const gc = rxn.gasConfig
+    const gas = gc ? gasStateRef.current : null
+    let containerWidth = width
+    if (gas) {
+      const previousPistonX = gas.pistonX
+      if (vars.freePiston) {
+        const pInside = pressureToKPa(gc, gas.pressure2D, width, height)
+        const pOutside = vars.externalPressure || 100
+        const error = Math.max(-0.5, Math.min(0.5, (pInside - pOutside) / pOutside))
+        gas.pistonX += gc.freePistonGain * error * gas.pistonX * dt
+      } else {
+        const target = pistonFromVolume(gc, vars.volume, width, height)
+        const step = gc.pistonSpeed * dt
+        gas.pistonX += Math.max(-step, Math.min(step, target - gas.pistonX))
+      }
+      const minX = pistonFromVolume(gc, gc.minVolume, width, height)
+      gas.pistonX = Math.max(minX, Math.min(maxPistonX(gc, width), gas.pistonX))
+      containerWidth = gas.pistonX
+      // While the piston is still travelling to a new volume, keep the
+      // pressure gauge in its fast-response mode
+      if (!vars.freePiston && Math.abs(gas.pistonX - previousPistonX) > 0.01) {
+        gas.lastChange = elapsed
+      }
+    }
+
     // Drain any pending "Add drop" burst requests (queued by button clicks).
     // Spawned particles get picked up by the spatial grid rebuild below.
     if (pendingSpawnsRef.current.length > 0) {
       const dropSpeed = rxn.speedFromTemp ? rxn.speedFromTemp(vars.temperature) * 60 : 60
-      processPendingSpawns(pendingSpawnsRef, particles, createParticle, rxn, { width, height }, dropSpeed)
+      processPendingSpawns(pendingSpawnsRef, particles, createParticle, rxn, { width: containerWidth, height }, dropSpeed)
+    }
+
+    // Real gas particles take up space; ideal ones have negligible volume.
+    // Newly added particles start at their equipartition speed for this
+    // temperature (so light helium really does move faster than CO₂).
+    if (gas) {
+      const scale = vars.realGas ? gc.realRadiusScale : 1
+      for (const p of particles) {
+        p.radius = p.baseRadius * scale
+        if (!p.gasSpeedSet) {
+          const speed = p.speed() || 1
+          const target = Math.sqrt((gc.speedK * vars.temperature) / p.mass)
+          p.vx *= target / speed
+          p.vy *= target / speed
+          p.gasSpeedSet = true
+        }
+      }
     }
 
     // Handle catalyst surface toggle
@@ -282,20 +366,52 @@ export function useSimulation(reaction, canvasRef) {
 
     // Update particle speeds based on temperature
     const targetSpeed = rxn.speedFromTemp ? rxn.speedFromTemp(vars.temperature) * 60 : 60
+
+    // Ideal gas: one rescaling factor for the whole system holds the mean
+    // kinetic energy per particle at speedK·T/2 (particles keep equal energies).
+    // Real gas: an Andersen thermostat — random particles get a fresh
+    // Maxwell–Boltzmann velocity — so slow particles can be captured by
+    // attractions and cluster at low temperature.
+    let gasScale = 1
+    if (gas && vars.realGas) {
+      const resetChance = 1 - Math.exp(-gc.thermostatRate * dt)
+      for (const p of particles) {
+        if (!p.alive || Math.random() > resetChance) continue
+        const sigma = Math.sqrt((gc.speedK * vars.temperature) / (2 * p.mass))
+        p.vx = gaussian() * sigma
+        p.vy = gaussian() * sigma
+      }
+    } else if (gas) {
+      let kinetic = 0
+      let count = 0
+      for (const p of particles) {
+        if (!p.alive) continue
+        kinetic += 0.5 * p.mass * (p.vx * p.vx + p.vy * p.vy)
+        count++
+      }
+      const targetKinetic = count * (gc.speedK / 2) * vars.temperature
+      if (kinetic > 0) gasScale = 1 + (Math.sqrt(targetKinetic / kinetic) - 1) * 0.05
+    }
+
     for (const p of particles) {
       if (!p.alive) continue
       if (p.bound) {
         p.update(dt, width, height, effectiveFloor)
         continue
       }
-      const currentSpeed = p.speed()
-      if (currentSpeed > 0) {
-        const ratio = targetSpeed / currentSpeed
-        const lerp = 0.05
-        p.vx *= 1 + (ratio - 1) * lerp
-        p.vy *= 1 + (ratio - 1) * lerp
+      if (gas) {
+        p.vx *= gasScale
+        p.vy *= gasScale
+      } else {
+        const currentSpeed = p.speed()
+        if (currentSpeed > 0) {
+          const ratio = targetSpeed / currentSpeed
+          const lerp = 0.05
+          p.vx *= 1 + (ratio - 1) * lerp
+          p.vy *= 1 + (ratio - 1) * lerp
+        }
       }
-      p.update(dt, width, height, effectiveFloor)
+      p.update(dt, containerWidth, height, effectiveFloor)
     }
 
     // Binding pass: check free particles near catalyst surface
@@ -352,6 +468,11 @@ export function useSimulation(reaction, canvasRef) {
     grid.clear()
     for (const p of particles) {
       if (p.alive && (!p.bound || p.latticeIon)) grid.insert(p)
+    }
+
+    // Real gas: weak attractions between neighbouring particles
+    if (gas && vars.realGas) {
+      applyGasAttraction(grid, dt, gc.attraction.strength, gc.attraction.range)
     }
 
     // Apply polarity forces (solubility simulation)
@@ -465,7 +586,45 @@ export function useSimulation(reaction, canvasRef) {
       }
     }
 
-    const collisions = detectAndResolveCollisions(grid, particles)
+    // Ideal gas particles have negligible volume, so they never hit each other
+    const collisions = (gas && !vars.realGas) ? [] : detectAndResolveCollisions(grid, particles)
+
+    // Pressure gauge, smoothed. Ideal gas: measured from the momentum the
+    // particles deliver to the walls. Real gas: the van der Waals equation —
+    // this frame-stepped engine can't reproduce attraction-driven pressure
+    // drops (overlap corrections heat clusters), so the particles show *why*
+    // real gases deviate and the equation supplies the numbers. The averaging
+    // window is short right after a change and grows while nothing changes.
+    if (gas && dt > 0) {
+      let impulse = 0
+      let count = 0
+      for (const p of particles) {
+        if (!p.alive) continue
+        impulse += p.wallImpulse
+        p.wallImpulse = 0
+        count++
+      }
+      const signature = [vars.temperature, vars.volume, vars.freePiston, vars.realGas, vars.externalPressure, count].join('|')
+      if (signature !== gas.signature) {
+        gas.signature = signature
+        gas.lastChange = elapsed
+      }
+      gas.count = count
+      let instantPressure
+      if (vars.realGas) {
+        const n = count * gc.molPerParticle
+        const V = volumeFromPiston(gc, gas.pistonX, width, height)
+        const kPa = vanDerWaalsPressure(gc.vanDerWaals, n, V, vars.temperature)
+        instantPressure = kPaToPressure2D(gc, kPa, width, height)
+      } else {
+        instantPressure = impulse / (wallPerimeter(gc, gas.pistonX, height) * dt)
+      }
+      // A free piston is steered by this reading, so keep its window short
+      // (a long, laggy average makes the piston overshoot and oscillate)
+      const maxTau = vars.freePiston ? gc.freePistonTau : gc.maxTau
+      const tau = Math.min(maxTau, 0.3 + 0.35 * (elapsed - gas.lastChange))
+      gas.pressure2D += (1 - Math.exp(-dt / tau)) * (instantPressure - gas.pressure2D)
+    }
 
     // Process reactions (skip for solubility — no chemical reactions)
     if (!rxn.hasPolarityForces) {
@@ -727,6 +886,16 @@ export function useSimulation(reaction, canvasRef) {
           point.dissolved = disPct
           setDissolutionStats({ dissolutionPercent: disPct })
         }
+      } else if (gas) {
+        // Gas laws: record the measured state so any pair of variables can be plotted
+        const g = computeGasStats(gc, gas, vars.temperature, width, height)
+        setGasStats(g)
+        point.P = Math.round(g.P * 10) / 10
+        point.V = Math.round(g.V * 100) / 100
+        point.T = g.T
+        point.TC = g.T - 273
+        point.n = Math.round(g.n * 1000) / 1000
+        point.ratio = Math.round(g.ratio * 1000) / 1000
       } else {
         // Rates-of-reaction graph: track particle counts
         const alive = particlesRef.current.filter(p => p.alive)
@@ -759,7 +928,8 @@ export function useSimulation(reaction, canvasRef) {
         }
       }
 
-      graphDataRef.current = [...graphDataRef.current.slice(-GRAPH_CONFIG.maxDataPoints), point]
+      const maxPoints = rxn.graph?.maxPoints || GRAPH_CONFIG.maxDataPoints
+      graphDataRef.current = [...graphDataRef.current.slice(-maxPoints), point]
       setGraphData([...graphDataRef.current])
     }
 
@@ -771,7 +941,7 @@ export function useSimulation(reaction, canvasRef) {
 
     // Update annotation — merge all available stats so condition functions
     // can read dissolutionPercent, separationPercent, ph, hCount, ohCount.
-    const combinedStats = { ...(dissolutionStats || {}), ...(phStats || {}) }
+    const combinedStats = { ...(dissolutionStats || {}), ...(phStats || {}), ...(gasStats || {}) }
     const annotation = getActiveAnnotation(rxn, vars, allConsumed, allDenatured, combinedStats)
     setActiveAnnotation(annotation)
 
@@ -781,7 +951,7 @@ export function useSimulation(reaction, canvasRef) {
       reactionRate: Math.round(statsRef.current.reactionRate * 10) / 10,
       elapsed: Math.round(elapsed * 10) / 10,
     })
-  }, [canvasRef, allConsumed, allDenatured, dissolutionStats, phStats])
+  }, [canvasRef, allConsumed, allDenatured, dissolutionStats, phStats, gasStats])
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current
@@ -796,11 +966,18 @@ export function useSimulation(reaction, canvasRef) {
     // Use logical dimensions since ctx is pre-scaled by DPR
     const logicalW = canvas._logicalWidth || SIM_DEFAULTS.canvasWidth
     const logicalH = canvas._logicalHeight || SIM_DEFAULTS.canvasHeight
-    renderFrame(ctx, logicalW, logicalH, particlesRef.current, annotations, '#1a1d24', catalystRef.current)
+    const gas = gasStateRef.current
+    const container = gas ? { pistonX: gas.pistonX } : null
+    renderFrame(ctx, logicalW, logicalH, particlesRef.current, annotations, '#1a1d24', catalystRef.current, container)
   }, [canvasRef, activeAnnotation])
 
   const updateVariable = useCallback((id, value) => {
     setVariables(prev => ({ ...prev, [id]: value }))
+  }, [])
+
+  const clearGraph = useCallback(() => {
+    graphDataRef.current = []
+    setGraphData([])
   }, [])
 
   const getParticleCount = useCallback(() => {
@@ -818,7 +995,9 @@ export function useSimulation(reaction, canvasRef) {
     enzymeStats,
     dissolutionStats,
     phStats,
+    gasStats,
     requestSpawn,
+    clearGraph,
     initSimulation,
     update,
     draw,
@@ -841,7 +1020,23 @@ function createParticle(pType, x, y) {
   p.polarity = pType.polarity || 0
   p.buoyancy = pType.buoyancy || 0
   p.charge = pType.charge || 0   // formal ionic charge (+1 / -1 / 0)
+  p.baseRadius = p.radius
+  if (pType.hideLabel) p.label = ''
   return p
+}
+
+// Standard normal random number (Box–Muller)
+function gaussian() {
+  const u = 1 - Math.random()
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * Math.random())
+}
+
+function computeGasStats(gc, gas, T, width, height) {
+  const P = pressureToKPa(gc, gas.pressure2D, width, height)
+  const V = volumeFromPiston(gc, gas.pistonX, width, height)
+  const n = gas.count * gc.molPerParticle
+  const ratio = n > 0 ? (P * V) / (n * R * T) : 1
+  return { P, V, T, n, ratio }
 }
 
 function getDefaultVariables(reaction) {

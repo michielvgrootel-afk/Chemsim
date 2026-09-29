@@ -3,6 +3,8 @@
 
 export const generalReaction = {
   id: 'general',
+  yearGroups: ['MYP5', 'DP1'],
+  syllabusRef: 'R2.2',
   name: 'General Model',
   subtitle: 'A + B \u2192 C',
   description: 'A simple model showing how two reactants combine to form a product.',

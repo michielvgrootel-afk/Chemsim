@@ -14,6 +14,8 @@ const INDICATOR_THRESHOLDS = [
 
 export const bufferScenario = {
   id: 'buffer',
+  yearGroups: ['DP2'],
+  syllabusRef: 'R3.1.16 (HL)',
   name: 'Buffer Demonstration',
   subtitle: 'Acetate buffer resists pH change',
   description: 'A buffer is an equimolar mixture of a weak acid (CH₃COOH) and its conjugate base (CH₃COO⁻). Add strong acid or base — the buffer absorbs them, and the pH barely changes. Compare to the Neutralisation scenario, where the same drops swing the pH dramatically.',
@@ -23,8 +25,8 @@ export const bufferScenario = {
 
   particleTypes: [
     { type: 'H2O',     label: 'H₂O', color: '#8ab4f0', shape: 'diamond', radius: 7,  mass: 0.8, polarity: 0.85, charge:  0 },
-    { type: 'CH3COOH', label: 'HAc', color: '#c46b8a', shape: 'hexagon', radius: 14, mass: 1.4, polarity: 0.3,  charge:  0 },
-    { type: 'CH3COO',  label: 'Ac⁻', color: '#9b6ef0', shape: 'hexagon', radius: 13, mass: 1.3, polarity: 0,    charge: -1 },
+    { type: 'CH3COOH', label: 'CH₃\nCOOH', color: '#c46b8a', shape: 'hexagon', radius: 17, mass: 1.4, polarity: 0.3,  charge:  0 },
+    { type: 'CH3COO',  label: 'CH₃\nCOO⁻', color: '#9b6ef0', shape: 'hexagon', radius: 16, mass: 1.3, polarity: 0,    charge: -1 },
     { type: 'HCl',     label: 'HCl', color: '#e05555', shape: 'circle',  radius: 12, mass: 1.2, polarity: 0.4,  charge:  0 },
     { type: 'NaOH',    label: 'NaOH',color: '#4f9cf0', shape: 'square',  radius: 14, mass: 1.4, polarity: 0.5,  charge:  0 },
     { type: 'H',       label: 'H⁺',  color: '#f0913a', shape: 'circle',  radius: 8,  mass: 0.3, polarity: 0,    charge: +1 },
@@ -98,6 +100,9 @@ export const bufferScenario = {
     ],
     xLabel: 'Time (s)',
     yLabel: 'pH',
+    yDomain: [0, 14],
+    yUnit: '',
+    yDecimals: 1,
   },
 
   annotations: [

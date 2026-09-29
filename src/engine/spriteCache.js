@@ -176,13 +176,25 @@ export function getSprite(type, color, radius, label, shape = 'circle') {
       break
   }
 
-  // Draw label text on particle
+  // Draw label text on particle — auto-shrinks to fit longer chemical
+  // formulas (e.g. "CH₃COOH" inside a 14-radius hexagon).
+  // A "\n" in the label stacks it on two lines (e.g. "CH₃\nCOOH").
   if (label) {
+    const lines = String(label).split('\n')
     ctx.fillStyle = '#fff'
-    ctx.font = `bold ${Math.max(9, radius * 0.7)}px Inter, sans-serif`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText(label, cx, cy + 0.5)
+    const maxWidth = radius * 1.75   // leave a tiny bit of padding inside the shape
+    let fontSize = Math.max(9, radius * 0.7)
+    const widest = () => Math.max(...lines.map(l => ctx.measureText(l).width))
+    ctx.font = `bold ${fontSize}px Inter, sans-serif`
+    while (widest() > maxWidth && fontSize > 5.5) {
+      fontSize -= 0.5
+      ctx.font = `bold ${fontSize}px Inter, sans-serif`
+    }
+    const lineHeight = fontSize * 1.05
+    const firstY = cy + 0.5 - ((lines.length - 1) * lineHeight) / 2
+    lines.forEach((line, i) => ctx.fillText(line, cx, firstY + i * lineHeight))
   }
 
   // Store logical size for reference
@@ -218,7 +230,7 @@ function drawStar(ctx, cx, cy, spikes, outerRadius, innerRadius) {
 // Pre-render all particle types for a reaction
 export function preRenderSprites(particleTypes, denatureConfig, indicatorConfig) {
   for (const pt of particleTypes) {
-    getSprite(pt.type, pt.color, pt.radius || 12, pt.label, pt.shape || 'circle')
+    getSprite(pt.type, pt.color, pt.radius || 12, pt.hideLabel ? '' : pt.label, pt.shape || 'circle')
   }
   // Pre-render denatured enzyme sprite if applicable
   if (denatureConfig) {

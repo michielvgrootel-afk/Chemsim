@@ -13,6 +13,8 @@ const INDICATOR_THRESHOLDS = [
 
 export const neutralizationScenario = {
   id: 'neutralization',
+  yearGroups: ['MYP5', 'DP2'],
+  syllabusRef: 'R3.1.7',
   name: 'Neutralisation',
   subtitle: 'HCl + NaOH → titration to neutral',
   description: 'Start with hydrochloric acid in the beaker (red indicator means acidic). Click "Add NaOH drop" repeatedly to titrate. Each drop falls from the top, ionises into Na⁺ + OH⁻, and the OH⁻ reacts with H⁺ to form water. Watch the indicator shift colour and the pH climb.',
@@ -86,6 +88,9 @@ export const neutralizationScenario = {
     ],
     xLabel: 'Time (s)',
     yLabel: 'pH',
+    yDomain: [0, 14],
+    yUnit: '',
+    yDecimals: 1,
   },
 
   annotations: [

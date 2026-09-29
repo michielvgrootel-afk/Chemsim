@@ -9,7 +9,16 @@ function phColor(ph) {
   return '#4f9cf0'                // strong base — blue
 }
 
-export function StatusBar({ stats, enzymeStats, dissolutionStats, phStats, onTakeQuiz }) {
+function Stat({ label, value, color }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs uppercase tracking-wider" style={{ color: '#6b7585' }}>{label}:</span>
+      <span className="text-sm font-mono font-semibold" style={{ color }}>{value}</span>
+    </div>
+  )
+}
+
+export function StatusBar({ stats, enzymeStats, dissolutionStats, phStats, gasStats, onTakeQuiz }) {
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60)
     const s = Math.floor(seconds % 60)
@@ -17,11 +26,23 @@ export function StatusBar({ stats, enzymeStats, dissolutionStats, phStats, onTak
   }
 
   return (
-    <div className="flex items-center justify-between px-4 py-2.5 rounded-lg"
+    <div className="flex items-center justify-between gap-4 px-4 py-2.5 rounded-lg"
       style={{ background: '#1e2535', border: '1px solid #363c4a' }}>
 
-      <div className="flex items-center gap-6">
-        {phStats ? (
+      <div className="flex items-center gap-x-6 gap-y-1 flex-wrap">
+        {gasStats ? (
+          <>
+            <Stat label="P" value={`${Math.round(gasStats.P)} kPa`} color="#4f9cf0" />
+            <Stat label="V" value={`${gasStats.V.toFixed(1)} dm³`} color="#3dba7e" />
+            <Stat label="T" value={`${gasStats.T} K (${Math.round(gasStats.T - 273)} °C)`} color="#f0913a" />
+            <Stat label="n" value={`${gasStats.n.toFixed(2)} mol`} color="#9b6ef0" />
+            <Stat
+              label="PV/nRT"
+              value={gasStats.ratio.toFixed(2)}
+              color={Math.abs(gasStats.ratio - 1) < 0.08 ? '#3dba7e' : '#f0c040'}
+            />
+          </>
+        ) : phStats ? (
           <>
             <div className="flex items-center gap-2">
               <span className="text-xs uppercase tracking-wider" style={{ color: '#6b7585' }}>pH:</span>
@@ -108,7 +129,7 @@ export function StatusBar({ stats, enzymeStats, dissolutionStats, phStats, onTak
 
       <button
         onClick={onTakeQuiz}
-        className="px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer border-0 transition-colors flex items-center gap-2"
+        className="shrink-0 whitespace-nowrap px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer border-0 transition-colors flex items-center gap-2"
         style={{
           background: '#4f9cf0',
           color: '#fff',

@@ -12,6 +12,8 @@ const INDICATOR_THRESHOLDS = [
 
 export const phScaleScenario = {
   id: 'ph-scale',
+  yearGroups: ['MYP5', 'DP2'],
+  syllabusRef: 'R3.1.4',
   name: 'pH Scale Sandbox',
   subtitle: 'Drive pH up & down with acids & bases',
   description: 'Click the buttons to add strong or weak acids and bases. Watch the universal indicator repaint and the pH counter respond. Goal: try to make the indicator turn each colour from red (pH 1) to blue (pH 14).',
@@ -23,13 +25,13 @@ export const phScaleScenario = {
     { type: 'H2O',     label: 'H₂O',   color: '#8ab4f0', shape: 'diamond',  radius: 7,  mass: 0.8, polarity: 0.85, charge:  0 },
     { type: 'HCl',     label: 'HCl',   color: '#e05555', shape: 'circle',   radius: 12, mass: 1.2, polarity: 0.4,  charge:  0 },
     { type: 'NaOH',    label: 'NaOH',  color: '#4f9cf0', shape: 'square',   radius: 14, mass: 1.4, polarity: 0.5,  charge:  0 },
-    { type: 'CH3COOH', label: 'HAc',   color: '#c46b8a', shape: 'hexagon',  radius: 14, mass: 1.4, polarity: 0.3,  charge:  0 },
+    { type: 'CH3COOH', label: 'CH₃\nCOOH', color: '#c46b8a', shape: 'hexagon',  radius: 17, mass: 1.4, polarity: 0.3,  charge:  0 },
     { type: 'NH3',     label: 'NH₃',   color: '#3dba7e', shape: 'triangle', radius: 12, mass: 0.9, polarity: 0.3,  charge:  0 },
     { type: 'H',       label: 'H⁺',    color: '#f0913a', shape: 'circle',   radius: 8,  mass: 0.3, polarity: 0,    charge: +1 },
     { type: 'OH',      label: 'OH⁻',   color: '#56c0e0', shape: 'circle',   radius: 11, mass: 0.6, polarity: 0,    charge: -1 },
     { type: 'Cl',      label: 'Cl⁻',   color: '#3dba7e', shape: 'circle',   radius: 14, mass: 1.3, polarity: 0,    charge: -1 },
     { type: 'Na',      label: 'Na⁺',   color: '#4f9cf0', shape: 'circle',   radius: 12, mass: 1.1, polarity: 0,    charge: +1 },
-    { type: 'CH3COO',  label: 'Ac⁻',   color: '#9b6ef0', shape: 'hexagon',  radius: 13, mass: 1.3, polarity: 0,    charge: -1 },
+    { type: 'CH3COO',  label: 'CH₃\nCOO⁻', color: '#9b6ef0', shape: 'hexagon',  radius: 16, mass: 1.3, polarity: 0,    charge: -1 },
     { type: 'NH4',     label: 'NH₄⁺',  color: '#f0c040', shape: 'triangle', radius: 13, mass: 1.0, polarity: 0,    charge: +1 },
     // Universal indicator particle — colour is reassigned at runtime
     // based on the global pH (see indicatorConfig.thresholds).
@@ -132,6 +134,9 @@ export const phScaleScenario = {
     ],
     xLabel: 'Time (s)',
     yLabel: 'pH',
+    yDomain: [0, 14],
+    yUnit: '',
+    yDecimals: 1,
   },
 
   annotations: [

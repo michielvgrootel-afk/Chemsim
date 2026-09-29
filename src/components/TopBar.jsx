@@ -1,7 +1,7 @@
 import React from 'react'
 import { SCREENS } from '../utils/constants'
 
-export function TopBar({ currentScreen, onNavigate, studentName, reactions, activeReactionId, onReactionSwitch }) {
+export function TopBar({ currentScreen, onNavigate, reactions, activeReactionId, onReactionSwitch }) {
   return (
     <div className="sticky top-0 z-50 flex items-center justify-between px-6 py-3"
       style={{ background: '#22262f', borderBottom: '1px solid #363c4a' }}>
@@ -49,14 +49,8 @@ export function TopBar({ currentScreen, onNavigate, studentName, reactions, acti
         )}
       </div>
 
-      {/* Right: Student name + Teacher link */}
+      {/* Right: Teacher link */}
       <div className="flex items-center gap-4">
-        {studentName && currentScreen === SCREENS.SIMULATION && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-md" style={{ background: '#2a2f3a' }}>
-            <span className="text-xs" style={{ color: '#6b7585' }}>Student:</span>
-            <span className="text-sm font-medium" style={{ color: '#e8eaf0' }}>{studentName}</span>
-          </div>
-        )}
         <button
           onClick={() => onNavigate(SCREENS.TEACHER)}
           className="px-3 py-1.5 rounded-md text-sm cursor-pointer border-0 transition-colors"

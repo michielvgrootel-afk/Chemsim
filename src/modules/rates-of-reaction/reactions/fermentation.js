@@ -2,6 +2,7 @@
 
 export const fermentationReaction = {
   id: 'fermentation',
+  yearGroups: ['MYP5'],
   name: 'Fermentation of Glucose',
   subtitle: 'C\u2086H\u2081\u2082O\u2086 \u2192 2C\u2082H\u2085OH + 2CO\u2082',
   description: 'Yeast enzymes break down glucose into ethanol and carbon dioxide. Temperature is critical \u2014 too hot denatures the enzyme.',

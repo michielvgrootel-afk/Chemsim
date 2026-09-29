@@ -10,7 +10,7 @@ import { useGameLoop } from '../hooks/useGameLoop'
 import { SIM_DEFAULTS } from '../utils/constants'
 
 export function SimulationPage({
-  reaction, module, studentName, onReactionChange,
+  reaction, module, onReactionChange,
   pendingSwitch, onConfirmSwitch, onCancelSwitch
 }) {
   const canvasRef = useRef(null)
@@ -30,7 +30,9 @@ export function SimulationPage({
     enzymeStats,
     dissolutionStats,
     phStats,
+    gasStats,
     requestSpawn,
+    clearGraph,
     initSimulation,
     update,
     draw,
@@ -138,7 +140,7 @@ export function SimulationPage({
 
         {/* Right Panel */}
         <div className="flex flex-col gap-4 p-4 overflow-y-auto" style={{ width: 340, minWidth: 300, borderLeft: '1px solid #363c4a', maxHeight: 'calc(100vh - 52px)' }}>
-          <LiveGraph data={graphData} config={reaction.graph} />
+          <LiveGraph data={graphData} config={reaction.graph} onClear={clearGraph} />
           <VariablePanel
             variables={reaction.variables}
             values={variables}
@@ -157,14 +159,13 @@ export function SimulationPage({
 
       {/* Status Bar */}
       <div className="px-4 pb-4">
-        <StatusBar stats={stats} enzymeStats={enzymeStats} dissolutionStats={dissolutionStats} phStats={phStats} onTakeQuiz={() => setShowQuiz(true)} />
+        <StatusBar stats={stats} enzymeStats={enzymeStats} dissolutionStats={dissolutionStats} phStats={phStats} gasStats={gasStats} onTakeQuiz={() => setShowQuiz(true)} />
       </div>
 
       {/* Quiz Modal */}
       <QuizModal
         isOpen={showQuiz}
         quiz={quiz}
-        studentName={studentName}
         reactionId={reaction.id}
         moduleName={module.name}
         onClose={() => setShowQuiz(false)}

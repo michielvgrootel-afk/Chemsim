@@ -50,7 +50,7 @@ export function VariablePanel({ variables, values, onUpdate, onAction, particleC
         Variables
       </h3>
 
-      {variables.map(v => (
+      {variables.filter(v => !v.visibleWhen || v.visibleWhen(values)).map(v => (
         <div key={v.id} className="p-3 rounded-lg" style={{ background: '#2a2f3a' }}>
           {v.type === 'toggle' ? (
             <ToggleControl variable={v} value={values[v.id]} onUpdate={onUpdate} />
@@ -86,7 +86,9 @@ function SliderControl({ variable, value, onUpdate, color }) {
           <span className="text-sm font-medium" style={{ color: '#e8eaf0' }}>{v.label}</span>
         </div>
         <span className="text-sm font-mono font-semibold" style={{ color: color || '#4f9cf0' }}>
-          {typeof displayValue === 'number' ? (Number.isInteger(v.step) ? displayValue : displayValue.toFixed(1)) : displayValue} {v.unit}
+          {v.formatValue
+            ? v.formatValue(displayValue)
+            : <>{typeof displayValue === 'number' ? (Number.isInteger(v.step) ? displayValue : displayValue.toFixed(1)) : displayValue} {v.unit}</>}
         </span>
       </div>
       <input

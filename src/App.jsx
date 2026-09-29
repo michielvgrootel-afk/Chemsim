@@ -1,31 +1,35 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { LoadingScreen } from './components/LoadingScreen'
 import { TopBar } from './components/TopBar'
 import { FrontPage } from './components/FrontPage'
 import { SimulationPage } from './components/SimulationPage'
 import { TeacherDashboard } from './teacher/TeacherDashboard'
-import { getModule, getAllModules } from './modules/registry'
+import { getModule, getAllModules, getEnabledReactions, findReaction } from './modules/registry'
 import { getItem } from './utils/storage'
-import { SCREENS, STORAGE_KEYS } from './utils/constants'
+import { SCREENS, STORAGE_KEYS, YEAR_GROUPS } from './utils/constants'
+
+// A shared link (?reaction=<id>) preselects that simulation on the front page.
+function getLinkedReactionId() {
+  return new URLSearchParams(window.location.search).get('reaction')
+}
 
 export default function App() {
   const [loading, setLoading] = useState(true)
   const [currentScreen, setCurrentScreen] = useState(SCREENS.FRONT)
-  const [studentName, setStudentName] = useState('')
   const [currentReaction, setCurrentReaction] = useState(null)
   const [pendingSwitch, setPendingSwitch] = useState(null)
+  const [linkedReactionId] = useState(getLinkedReactionId)
+  const [activeModuleId, setActiveModuleId] = useState(
+    () => findReaction(linkedReactionId)?.module.id || 'rates-of-reaction'
+  )
+  const [yearId, setYearId] = useState(
+    () => findReaction(linkedReactionId)?.reaction.yearGroups?.[0] || YEAR_GROUPS[0].id
+  )
 
-  const [activeModuleId, setActiveModuleId] = useState('rates-of-reaction')
   const module = getModule(activeModuleId)
   const allModules = getAllModules()
-  const storedActive = getItem(STORAGE_KEYS.ACTIVE_MODULES, null)
-  // The stored "active reactions" list is module-agnostic — when the user
-  // switches modules, the saved IDs may not match any reaction in the
-  // current module. In that case, fall back to enabling all reactions for
-  // this module so the UI doesn't render an empty reaction picker.
-  const matchedActive = storedActive ? module.reactions.map(r => r.id).filter(id => storedActive.includes(id)) : null
-  const activeModules = (matchedActive && matchedActive.length > 0) ? matchedActive : module.reactions.map(r => r.id)
+  const enabledIds = getItem(STORAGE_KEYS.ACTIVE_MODULES, null)
 
   // Simulate loading (fonts, etc.)
   useEffect(() => {
@@ -33,18 +37,9 @@ export default function App() {
     return () => clearTimeout(timer)
   }, [])
 
-  // Check URL params for direct reaction link
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const reactionId = params.get('reaction')
-    if (reactionId) {
-      const rxn = module.getReaction(reactionId)
-      if (rxn) setCurrentReaction(rxn)
-    }
-  }, [module])
-
-  const handleStart = useCallback((name, reaction) => {
-    setStudentName(name)
+  const handleStart = useCallback((reaction, moduleId, startYearId) => {
+    setActiveModuleId(moduleId)
+    setYearId(startYearId)
     setCurrentReaction(reaction)
     setCurrentScreen(SCREENS.SIMULATION)
   }, [])
@@ -60,7 +55,7 @@ export default function App() {
   // TopBar requests a switch — if in simulation, set pending (SimulationPage shows confirm)
   const handleReactionSwitch = useCallback((reactionId) => {
     if (currentScreen === SCREENS.SIMULATION && currentReaction && reactionId !== currentReaction.id) {
-      const rxn = module.getReaction(reactionId)
+      const rxn = module.reactions.find(r => r.id === reactionId)
       if (rxn) setPendingSwitch(rxn)
     }
   }, [currentScreen, currentReaction, module])
@@ -79,6 +74,10 @@ export default function App() {
 
   if (loading) return <LoadingScreen />
 
+  // In the simulation, the top bar offers the other simulations of the same
+  // topic that belong to the student's year group.
+  const topBarReactions = getEnabledReactions(module, enabledIds).filter(r => r.yearGroups?.includes(yearId))
+
   return (
     <ErrorBoundary>
       <div className="min-h-screen" style={{ background: '#1a1d24' }}>
@@ -86,8 +85,7 @@ export default function App() {
           <TopBar
             currentScreen={currentScreen}
             onNavigate={handleNavigate}
-            studentName={studentName}
-            reactions={module.reactions.filter(r => activeModules.includes(r.id))}
+            reactions={topBarReactions}
             activeReactionId={currentReaction?.id}
             onReactionSwitch={handleReactionSwitch}
           />
@@ -95,12 +93,12 @@ export default function App() {
 
         {currentScreen === SCREENS.FRONT && (
           <FrontPage
-            module={module}
-            allModules={allModules}
-            activeModuleId={activeModuleId}
-            onModuleChange={setActiveModuleId}
+            modules={allModules}
+            enabledIds={enabledIds}
+            yearId={yearId}
+            onYearChange={setYearId}
+            initialReactionId={currentReaction?.id || linkedReactionId}
             onStart={handleStart}
-            activeModules={activeModules}
           />
         )}
 
@@ -108,7 +106,6 @@ export default function App() {
           <SimulationPage
             reaction={currentReaction}
             module={module}
-            studentName={studentName}
             onReactionChange={handleReactionChange}
             pendingSwitch={pendingSwitch}
             onConfirmSwitch={handleConfirmSwitch}
@@ -118,7 +115,7 @@ export default function App() {
 
         {currentScreen === SCREENS.TEACHER && (
           <TeacherDashboard
-            module={module}
+            modules={allModules}
             onNavigate={handleNavigate}
           />
         )}

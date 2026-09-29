@@ -5,6 +5,8 @@
 
 export const strongVsWeakScenario = {
   id: 'strong-vs-weak',
+  yearGroups: ['DP2'],
+  syllabusRef: 'R3.1.6',
   name: 'Strong vs Weak Acid',
   subtitle: 'HCl vs CH₃COOH dissociation',
   description: 'A beaker containing the same number of HCl molecules and CH₃COOH (acetic acid) molecules dissolved in water. Watch how HCl ionises completely, while CH₃COOH barely ionises — that\'s the difference between a strong and a weak acid.',
@@ -15,10 +17,10 @@ export const strongVsWeakScenario = {
   particleTypes: [
     { type: 'H2O',     label: 'H₂O', color: '#8ab4f0', shape: 'diamond', radius: 7,  mass: 0.8, polarity: 0.85, charge:  0 },
     { type: 'HCl',     label: 'HCl', color: '#e05555', shape: 'circle',  radius: 12, mass: 1.2, polarity: 0.4,  charge:  0 },
-    { type: 'CH3COOH', label: 'HAc', color: '#c46b8a', shape: 'hexagon', radius: 14, mass: 1.4, polarity: 0.3,  charge:  0 },
+    { type: 'CH3COOH', label: 'CH₃\nCOOH', color: '#c46b8a', shape: 'hexagon', radius: 17, mass: 1.4, polarity: 0.3,  charge:  0 },
     { type: 'H',       label: 'H⁺',  color: '#f0913a', shape: 'circle',  radius: 8,  mass: 0.3, polarity: 0,    charge: +1 },
     { type: 'Cl',      label: 'Cl⁻', color: '#3dba7e', shape: 'circle',  radius: 14, mass: 1.3, polarity: 0,    charge: -1 },
-    { type: 'CH3COO',  label: 'Ac⁻', color: '#9b6ef0', shape: 'hexagon', radius: 13, mass: 1.3, polarity: 0,    charge: -1 },
+    { type: 'CH3COO',  label: 'CH₃\nCOO⁻', color: '#9b6ef0', shape: 'hexagon', radius: 16, mass: 1.3, polarity: 0,    charge: -1 },
   ],
 
   variables: [

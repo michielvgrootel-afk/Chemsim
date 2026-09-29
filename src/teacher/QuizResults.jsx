@@ -12,6 +12,8 @@ export function QuizResults() {
     : results.filter(r => r.reaction === filterReaction)
 
   const reactions = [...new Set(results.map(r => r.reaction))]
+  // Students no longer enter a name; only results saved by older versions have one.
+  const hasNames = filteredResults.some(r => r.studentName)
 
   return (
     <div>
@@ -55,7 +57,9 @@ export function QuizResults() {
           <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#2a2f3a' }}>
-                <th className="text-left px-4 py-3 font-medium" style={{ color: '#6b7585', borderBottom: '1px solid #363c4a' }}>Student</th>
+                {hasNames && (
+                  <th className="text-left px-4 py-3 font-medium" style={{ color: '#6b7585', borderBottom: '1px solid #363c4a' }}>Student</th>
+                )}
                 <th className="text-left px-4 py-3 font-medium" style={{ color: '#6b7585', borderBottom: '1px solid #363c4a' }}>Reaction</th>
                 <th className="text-left px-4 py-3 font-medium" style={{ color: '#6b7585', borderBottom: '1px solid #363c4a' }}>Score</th>
                 <th className="text-left px-4 py-3 font-medium" style={{ color: '#6b7585', borderBottom: '1px solid #363c4a' }}>Date</th>
@@ -64,7 +68,9 @@ export function QuizResults() {
             <tbody>
               {filteredResults.slice().reverse().map((r, idx) => (
                 <tr key={idx} style={{ borderBottom: '1px solid #363c4a' }}>
-                  <td className="px-4 py-3" style={{ color: '#e8eaf0' }}>{r.studentName}</td>
+                  {hasNames && (
+                    <td className="px-4 py-3" style={{ color: '#e8eaf0' }}>{r.studentName || '—'}</td>
+                  )}
                   <td className="px-4 py-3" style={{ color: '#8a95a8' }}>{r.reaction}</td>
                   <td className="px-4 py-3">
                     <span className="px-2 py-0.5 rounded text-xs font-semibold" style={{

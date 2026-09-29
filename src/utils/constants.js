@@ -72,6 +72,14 @@ export const GRAPH_CONFIG = {
   strokeWidth: 2,
 }
 
+// Year groups shown as tabs on the front page. Each scenario lists the
+// year groups it belongs to in its `yearGroups` array.
+export const YEAR_GROUPS = [
+  { id: 'MYP5', label: 'MYP 5', blurb: 'Rates of reaction, solubility, and an introduction to acids and bases.' },
+  { id: 'DP1', label: 'DP 1', blurb: 'IB Chemistry year 1: gases, rates, equilibrium and bonding.' },
+  { id: 'DP2', label: 'DP 2', blurb: 'IB Chemistry year 2: acids, bases and buffers.' },
+]
+
 // Screen identifiers
 export const SCREENS = {
   FRONT: 'front',

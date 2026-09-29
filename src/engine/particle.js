@@ -26,6 +26,7 @@ export class Particle {
     this.latticeIon = false  // Whether locked in a crystal lattice (solubility)
     this.polarity = 0        // -1.0 (nonpolar) to +1.0 (polar) for solubility sim
     this.buoyancy = 0        // Vertical force bias (positive = floats up)
+    this.wallImpulse = 0     // Momentum given to the walls; read and reset each frame by the gas pressure gauge
 
     // Grid cell (updated each frame by spatial grid)
     this.cellX = 0
@@ -70,18 +71,22 @@ export class Particle {
     // Bounce off walls
     if (this.x - this.radius < 0) {
       this.x = this.radius
+      if (this.vx < 0) this.wallImpulse -= 2 * this.mass * this.vx
       this.vx = Math.abs(this.vx)
     }
     if (this.x + this.radius > canvasWidth) {
       this.x = canvasWidth - this.radius
+      if (this.vx > 0) this.wallImpulse += 2 * this.mass * this.vx
       this.vx = -Math.abs(this.vx)
     }
     if (this.y - this.radius < 0) {
       this.y = this.radius
+      if (this.vy < 0) this.wallImpulse -= 2 * this.mass * this.vy
       this.vy = Math.abs(this.vy)
     }
     if (this.y + this.radius > floor) {
       this.y = floor - this.radius
+      if (this.vy > 0) this.wallImpulse += 2 * this.mass * this.vy
       this.vy = -Math.abs(this.vy)
     }
 

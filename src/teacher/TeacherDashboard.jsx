@@ -5,7 +5,7 @@ import { QuizResults } from './QuizResults'
 import { AssignmentNotes } from './AssignmentNotes'
 import { SCREENS } from '../utils/constants'
 
-export function TeacherDashboard({ module, onNavigate }) {
+export function TeacherDashboard({ modules, onNavigate }) {
   const [authenticated, setAuthenticated] = useState(false)
   const [activeTab, setActiveTab] = useState('modules')
 
@@ -64,9 +64,9 @@ export function TeacherDashboard({ module, onNavigate }) {
 
       {/* Tab Content */}
       <div className="mx-6 rounded-b-xl rounded-tr-xl p-6" style={{ background: '#22262f', border: '1px solid #363c4a' }}>
-        {activeTab === 'modules' && <ModuleManager module={module} />}
+        {activeTab === 'modules' && <ModuleManager modules={modules} />}
         {activeTab === 'results' && <QuizResults />}
-        {activeTab === 'notes' && <AssignmentNotes module={module} />}
+        {activeTab === 'notes' && <AssignmentNotes modules={modules} />}
       </div>
     </div>
   )

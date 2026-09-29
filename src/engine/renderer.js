@@ -1,7 +1,7 @@
 // Canvas renderer - draws particles, annotations, and effects
 import { getSprite } from './spriteCache'
 
-export function renderFrame(ctx, canvasWidth, canvasHeight, particles, annotations, bgColor = '#1a1d24', catalystSurface = null) {
+export function renderFrame(ctx, canvasWidth, canvasHeight, particles, annotations, bgColor = '#1a1d24', catalystSurface = null, container = null) {
   // Clear canvas
   ctx.fillStyle = bgColor
   ctx.fillRect(0, 0, canvasWidth, canvasHeight)
@@ -30,6 +30,9 @@ export function renderFrame(ctx, canvasWidth, canvasHeight, particles, annotatio
 
   // Draw catalyst surface (between grid and particles so particles appear on top)
   drawCatalystSurface(ctx, catalystSurface, canvasWidth)
+
+  // Gas container piston (gas-law scenarios)
+  drawPiston(ctx, container, canvasWidth, canvasHeight)
 
   // Draw particles
   for (const p of particles) {
@@ -78,6 +81,27 @@ export function renderFrame(ctx, canvasWidth, canvasHeight, particles, annotatio
     ctx.restore()
   }
 
+}
+
+function drawPiston(ctx, container, canvasWidth, canvasHeight) {
+  if (!container || container.pistonX == null) return
+  const x = container.pistonX
+  const plate = 8
+
+  // Space behind the piston is outside the container
+  ctx.fillStyle = 'rgba(8, 10, 14, 0.6)'
+  ctx.fillRect(x, 0, canvasWidth - x, canvasHeight)
+
+  // Piston rod
+  ctx.fillStyle = '#4a4e57'
+  ctx.fillRect(x + plate, canvasHeight / 2 - 5, canvasWidth - x - plate, 10)
+
+  // Piston plate
+  const grad = ctx.createLinearGradient(x, 0, x + plate, 0)
+  grad.addColorStop(0, '#b4bac4')
+  grad.addColorStop(1, '#6a6f79')
+  ctx.fillStyle = grad
+  ctx.fillRect(x, 1, plate, canvasHeight - 2)
 }
 
 function drawCatalystSurface(ctx, surface, canvasWidth) {

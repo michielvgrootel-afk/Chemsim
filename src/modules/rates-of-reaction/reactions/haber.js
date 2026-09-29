@@ -2,6 +2,8 @@
 
 export const haberReaction = {
   id: 'haber',
+  yearGroups: ['MYP5', 'DP1'],
+  syllabusRef: 'R2.3',
   name: 'Haber Process',
   subtitle: 'N\u2082 + 3H\u2082 \u21cc 2NH\u2083',
   description: 'The industrial synthesis of ammonia. A reversible reaction where equilibrium position depends on temperature and pressure.',

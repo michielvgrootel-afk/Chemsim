@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { setItem, getItem } from '../utils/storage'
 import { STORAGE_KEYS } from '../utils/constants'
 
-export function QuizModal({ isOpen, quiz, studentName, reactionId, moduleName, onClose }) {
+export function QuizModal({ isOpen, quiz, reactionId, moduleName, onClose }) {
   const [currentQ, setCurrentQ] = useState(0)
   const [answers, setAnswers] = useState({})
   const [submitted, setSubmitted] = useState(false)
@@ -30,7 +30,6 @@ export function QuizModal({ isOpen, quiz, studentName, reactionId, moduleName, o
 
     // Save to localStorage
     const result = {
-      studentName,
       module: moduleName || 'Unknown',
       reaction: reactionId,
       score: correct,
