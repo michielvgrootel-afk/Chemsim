@@ -1,6 +1,8 @@
 // Polarity-based attraction/repulsion forces for solubility simulation
 // Similar polarity → attract (dissolves), different polarity → repel (immiscible)
 
+import { crystalVelocityAt, distanceToCrystal } from './crystal'
+
 const FORCE_RANGE = 100       // Max distance for force interaction (pixels)
 const ATTRACT_STRENGTH = 300  // Base attraction force
 const REPEL_STRENGTH = 500    // Base repulsion force
@@ -25,6 +27,9 @@ export function applyPolarityForces(particles, grid, dt, config = {}) {
   const latticeMode = config.latticeMode || false  // When true, only attract water toward bound lattice ions
   const ionRepelStr = config.ionRepelStrength || 700   // Same-charge ion repulsion magnitude
   const ionRepelRange = config.ionRepelRange || 50     // px — tight close-range only
+  // Optional: scale the range with ion size, range = factor × (rA + rB), so a
+  // big Cl⁻ pair keeps a proportionally bigger gap than a small Na⁺ pair
+  const ionRepelRangeFactor = config.ionRepelRangeFactor
 
   for (const [a, b] of pairs) {
     if (!a.alive || !b.alive) continue
@@ -51,11 +56,12 @@ export function applyPolarityForces(particles, grid, dt, config = {}) {
           const dxIon = b.x - a.x
           const dyIon = b.y - a.y
           const distIon = Math.sqrt(dxIon * dxIon + dyIon * dyIon)
-          if (distIon > 1 && distIon < ionRepelRange) {
+          const repelRange = ionRepelRangeFactor ? ionRepelRangeFactor * (a.radius + b.radius) : ionRepelRange
+          if (distIon > 1 && distIon < repelRange) {
             const nxIon = dxIon / distIon
             const nyIon = dyIon / distIon
             // Quadratic falloff — gentle at the edge of range, firm near contact
-            const f = 1 - distIon / ionRepelRange
+            const f = 1 - distIon / repelRange
             const forceMag = -ionRepelStr * f * f * dt   // negative = repulsion
             const fxRaw = forceMag * nxIon
             const fyRaw = forceMag * nyIon
@@ -172,82 +178,116 @@ export function applyPolarityForces(particles, grid, dt, config = {}) {
 //   4. Small random turbulence on top to break perfect symmetry.
 //
 // Must be called every frame with dt/elapsed/canvas dims.
-export function applyStirring(particles, dt, elapsed, canvasWidth, canvasHeight, strength = 1) {
+// Optional `crystal` (see crystal.js): the flow cannot reach the crystal's
+// surface — within `boundaryLayer` px of it the water moves with the crystal
+// instead (the no-slip condition), so stirring delivers fresh water to the
+// surface without stripping its hydration shells away.
+// `field` and `speed` choose the flow pattern (see stirringFlowVelocity);
+// `steer` is how tightly particles follow it (1/s) — tighter following means
+// less outward drift from the centre of a vortex.
+export function applyStirring(particles, dt, elapsed, canvasWidth, canvasHeight, strength = 1, { crystal, boundaryLayer = 0, field, speed = 360, steer = 7 } = {}) {
   if (!particles.length || !canvasWidth || !canvasHeight) return
 
-  const W = canvasWidth
-  const H = canvasHeight
-  const halfW = W / 2
+  const shielded = crystal && crystal.members.length > 0 && boundaryLayer > 0
+  const flow = { field, speed: speed * strength }
 
-  // Target flow speed — px/s. Tuned to clearly beat buoyancy (~96 px/s
-  // steady-state) and polarity repulsion (~50 px/s steady-state) so the
-  // stirring visibly dominates.
-  const targetSpeed = 360 * strength
-
-  // Gyre centres wobble in small circles so the flow pattern isn't static.
-  const wobbleR = Math.min(W, H) * 0.08
-  const wobble1X = Math.cos(elapsed * 1.3) * wobbleR
-  const wobble1Y = Math.sin(elapsed * 1.7) * wobbleR
-  const wobble2X = Math.cos(elapsed * 1.5 + Math.PI) * wobbleR
-  const wobble2Y = Math.sin(elapsed * 1.1 + Math.PI) * wobbleR
-
-  // Frame-rate-stable steering: blend ~85% per second toward target.
-  // Solves for lerp such that (1 - lerp)^(1/dt) ≈ exp(-rate)
-  const steerRate = 7 * strength
+  // Frame-rate-stable steering: blend toward the target velocity at `steer`
+  // per second. Solves for lerp such that (1 - lerp)^(1/dt) ≈ exp(-rate)
+  const steerRate = steer * strength
   const lerp = 1 - Math.exp(-steerRate * dt)
-
-  for (const p of particles) {
-    if (!p.alive || p.bound) continue
-
-    // Determine which gyre this particle is in, and its position relative
-    // to that gyre's centre (normalized to [-1, 1]).
-    let gyreCx, gyreCy, sign
-    if (p.x < halfW) {
-      gyreCx = halfW / 2 + wobble1X
-      gyreCy = H / 2 + wobble1Y
-      sign = 1   // clockwise on the left half
-    } else {
-      gyreCx = halfW + halfW / 2 + wobble2X
-      gyreCy = H / 2 + wobble2Y
-      sign = -1  // counter-clockwise on the right half
-    }
-    const nx = (p.x - gyreCx) / (halfW / 2)
-    const ny = (p.y - gyreCy) / (H / 2)
-
-    // Tangential velocity (perpendicular to radius) — this is the
-    // rotation. Magnitude tapers slightly toward the centre so flow at
-    // the gyre core isn't infinite-fast.
-    const r = Math.sqrt(nx * nx + ny * ny)
-    const intensity = Math.min(1, 0.25 + r * 0.9)
-    let tx = -ny * sign * intensity
-    let ty =  nx * sign * intensity
-
-    // Cross-flow perturbation — extra sin-wave term that breaks symmetry
-    // and pushes particles between the two gyres, dramatically increasing
-    // mixing across the midline.
-    const phase = elapsed * 2.2
-    tx += 0.55 * Math.sin(p.y / H * Math.PI * 2 + phase)
-    ty += 0.55 * Math.cos(p.x / W * Math.PI * 2 - phase)
-
-    // Normalize the direction and scale to target speed.
-    const mag = Math.sqrt(tx * tx + ty * ty) || 1
-    const fx = (tx / mag) * targetSpeed
-    const fy = (ty / mag) * targetSpeed
-
-    // Steer toward the target velocity (blended).
-    p.vx = p.vx * (1 - lerp) + fx * lerp
-    p.vy = p.vy * (1 - lerp) + fy * lerp
-  }
 
   // Random turbulence on top — kicks particles around so the smooth flow
   // field doesn't lock them into perfect orbits. Strong enough to make
   // visible chaos but not enough to dominate the gyres.
   const jitter = 120 * strength * dt
+
   for (const p of particles) {
     if (!p.alive || p.bound) continue
-    p.vx += (Math.random() - 0.5) * jitter
-    p.vy += (Math.random() - 0.5) * jitter
+
+    let { vx: fx, vy: fy } = stirringFlowVelocity(p.x, p.y, elapsed, canvasWidth, canvasHeight, flow)
+    let calm = 0
+    if (shielded) {
+      const gap = distanceToCrystal(crystal, p.x, p.y)
+      if (gap < boundaryLayer) {
+        calm = 1 - Math.max(0, gap) / boundaryLayer
+        const c = crystalVelocityAt(crystal, p.x, p.y)
+        fx += (c.vx - fx) * calm
+        fy += (c.vy - fy) * calm
+      }
+    }
+
+    // Steer toward the target velocity (blended).
+    p.vx = p.vx * (1 - lerp) + fx * lerp + (Math.random() - 0.5) * jitter * (1 - calm)
+    p.vy = p.vy * (1 - lerp) + fy * lerp + (Math.random() - 0.5) * jitter * (1 - calm)
   }
+}
+
+// Stirring flow velocity (px/s) at a point.
+//   'gyres' (default): two counter-rotating gyres with wobbling centres plus
+//     a cross-flow term — aggressive, built to break oil/water layers apart.
+//     It is not divergence-free, so it bunches particles into streaks.
+//   'cellular': derived from a stream function that is zero on the walls, so
+//     the flow is divergence-free (no bunching or gaps, like a real liquid) and
+//     never pushes into the walls. A second mode pulses in and out, switching
+//     between one and two vortices so the liquid keeps mixing.
+// `speed` is the peak flow speed.
+export function stirringFlowVelocity(x, y, elapsed, W, H, { field = 'gyres', speed = 360 } = {}) {
+  if (field === 'cellular') {
+    const kx = Math.PI / W
+    const ky = Math.PI / H
+    const scale = (speed * H) / Math.PI
+    const pulse = 0.9 * Math.sin(elapsed * 0.8)
+    const sinY = Math.sin(ky * y)
+    const cosY = Math.cos(ky * y)
+    // ψ = scale·[sin(kx·x) + pulse·sin(2kx·x)]·sin(ky·y);  v = (∂ψ/∂y, −∂ψ/∂x)
+    return {
+      vx: scale * ky * (Math.sin(kx * x) + pulse * Math.sin(2 * kx * x)) * cosY,
+      vy: -scale * kx * (Math.cos(kx * x) + 2 * pulse * Math.cos(2 * kx * x)) * sinY,
+    }
+  }
+
+  const halfW = W / 2
+
+  // Target flow speed — px/s. Tuned to clearly beat buoyancy (~96 px/s
+  // steady-state) and polarity repulsion (~50 px/s steady-state) so the
+  // stirring visibly dominates.
+  const targetSpeed = speed
+
+  // Determine which gyre the point is in (centres wobble in small circles so
+  // the flow pattern isn't static), and its position relative to that
+  // gyre's centre (normalized to [-1, 1]).
+  const wobbleR = Math.min(W, H) * 0.08
+  let gyreCx, gyreCy, sign
+  if (x < halfW) {
+    gyreCx = halfW / 2 + Math.cos(elapsed * 1.3) * wobbleR
+    gyreCy = H / 2 + Math.sin(elapsed * 1.7) * wobbleR
+    sign = 1   // clockwise on the left half
+  } else {
+    gyreCx = halfW + halfW / 2 + Math.cos(elapsed * 1.5 + Math.PI) * wobbleR
+    gyreCy = H / 2 + Math.sin(elapsed * 1.1 + Math.PI) * wobbleR
+    sign = -1  // counter-clockwise on the right half
+  }
+  const nx = (x - gyreCx) / (halfW / 2)
+  const ny = (y - gyreCy) / (H / 2)
+
+  // Tangential velocity (perpendicular to radius) — this is the
+  // rotation. Magnitude tapers slightly toward the centre so flow at
+  // the gyre core isn't infinite-fast.
+  const r = Math.sqrt(nx * nx + ny * ny)
+  const intensity = Math.min(1, 0.25 + r * 0.9)
+  let tx = -ny * sign * intensity
+  let ty =  nx * sign * intensity
+
+  // Cross-flow perturbation — extra sin-wave term that breaks symmetry
+  // and pushes particles between the two gyres, dramatically increasing
+  // mixing across the midline.
+  const phase = elapsed * 2.2
+  tx += 0.55 * Math.sin(y / H * Math.PI * 2 + phase)
+  ty += 0.55 * Math.cos(x / W * Math.PI * 2 - phase)
+
+  // Normalize the direction and scale to target speed.
+  const mag = Math.sqrt(tx * tx + ty * ty) || 1
+  return { vx: (tx / mag) * targetSpeed, vy: (ty / mag) * targetSpeed }
 }
 
 // Calculate dissolution percentage

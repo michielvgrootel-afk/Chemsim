@@ -5,7 +5,8 @@ import { detectAndResolveCollisions } from '../engine/collisionDetector'
 import { renderFrame } from '../engine/renderer'
 import { preRenderSprites, clearSpriteCache } from '../engine/spriteCache'
 import { CatalystSurface } from '../engine/catalystSurface'
-import { applyPolarityForces, applyStirring, calcDissolutionPercent, calcLatticeDissolutionPercent, calcSeparationPercent } from '../engine/polarityForces'
+import { applyPolarityForces, applyStirring, stirringFlowVelocity, calcDissolutionPercent, calcLatticeDissolutionPercent, calcSeparationPercent } from '../engine/polarityForces'
+import { createCrystal, updateCrystal } from '../engine/crystal'
 import { spawnEmulsifiers, despawnEmulsifiers, updateEmulsifierBonds } from '../engine/emulsifier'
 import { calcPH, updateIndicators, processPendingSpawns } from '../engine/acidBaseUtils'
 import {
@@ -38,6 +39,8 @@ export function useSimulation(reaction, canvasRef) {
   const [dissolutionStats, setDissolutionStats] = useState(null)
   const clusterCenterRef = useRef(null)
   const lastHydrationCheckRef = useRef(0)
+  // Undissolved ionic crystal, moved as one rigid body (see crystal.js)
+  const crystalRef = useRef(null)
   // Queue of pending burst-spawn requests from "Add drop" buttons
   // (drained at the top of each update tick by processPendingSpawns).
   const pendingSpawnsRef = useRef([])
@@ -88,6 +91,7 @@ export function useSimulation(reaction, canvasRef) {
       : height - 20
 
     gasStateRef.current = null
+    crystalRef.current = null
 
     const particles = []
     const speed = rxn.speedFromTemp ? rxn.speedFromTemp(vars.temperature) : 1
@@ -122,6 +126,9 @@ export function useSimulation(reaction, canvasRef) {
         }
       }
       clusterCenterRef.current = { x: centerX, y: centerY }
+      if (lc.bound && rxn.crystalConfig) {
+        crystalRef.current = createCrystal(particles.filter(p => p.latticeIon))
+      }
 
       // Fill remaining space with solvent
       const solventTypes = rxn.solventTypes || []
@@ -414,6 +421,14 @@ export function useSimulation(reaction, canvasRef) {
       p.update(dt, containerWidth, height, effectiveFloor)
     }
 
+    // The undissolved crystal moves as one solid: carried and turned by the
+    // stirring flow, coasting to a stop when stirring ends.
+    const crystal = crystalRef.current
+    if (crystal && crystal.members.length > 0) {
+      const flowAt = vars.stirring ? (x, y) => stirringFlowVelocity(x, y, elapsed, width, height, rxn.stirConfig) : null
+      updateCrystal(crystal, dt, flowAt, width, height, rxn.crystalConfig)
+    }
+
     // Binding pass: check free particles near catalyst surface
     if (catalyst?.active) {
       for (const p of particles) {
@@ -511,27 +526,30 @@ export function useSimulation(reaction, canvasRef) {
           lastHydrationCheckRef.current = elapsed
           const solventTypes = rxn.solventTypes || []
           const soluteTypes = rxn.soluteTypes || []
-          const radiusSq = hc.radius * hc.radius
+          // Shell radius can differ per ion (Cl⁻ is much bigger than Na⁺)
+          const shellRadius = (type) => hc.radii?.[type] ?? hc.radius
           // Temperature modulates threshold slightly: hotter water dislodges easier
           const tempFactor = 1 + (vars.temperature - 25) / 200
           const speed = rxn.speedFromTemp(vars.temperature)
           const perTypeThresholds = hc.thresholds || {}
 
-          // Step 1: each water picks its single nearest ion within shell radius.
-          //          If no ion is within radius, the water is unbonded.
+          // Step 1: each water picks the ion whose surface is nearest, among
+          //          ions it is within the shell radius of. If there is none,
+          //          the water is unbonded.
           //          Bonds persist between checks — they're only reassigned here.
           const shellCounts = new Map()
           for (const w of particles) {
             if (!w.alive || !solventTypes.includes(w.type)) continue
             let bestIonId = null
-            let bestDistSq = radiusSq
+            let bestGap = Infinity
             const nearby = grid.getNearby(w)
             for (const o of nearby) {
               if (!o.alive || !soluteTypes.includes(o.type)) continue
-              const dx = w.x - o.x, dy = w.y - o.y
-              const dsq = dx * dx + dy * dy
-              if (dsq < bestDistSq) {
-                bestDistSq = dsq
+              const dist = Math.hypot(w.x - o.x, w.y - o.y)
+              if (dist >= shellRadius(o.type)) continue
+              const gap = dist - o.radius
+              if (gap < bestGap) {
+                bestGap = gap
                 bestIonId = o.id
               }
             }
@@ -560,6 +578,10 @@ export function useSimulation(reaction, canvasRef) {
                 // On subsequent re-releases we leave velocity alone — it will be
                 // picked up by ion-dipole forces and water collisions naturally.
               }
+            } else if (vars.stirring && p.dissolved) {
+              // While stirring, a dissolved ion is carried along by the flow
+              // even if its shell is momentarily thin
+              p.bound = false
             } else {
               // Hydration shell too thin — ion is frozen until rebuilt
               p.bound = true
@@ -570,12 +592,18 @@ export function useSimulation(reaction, canvasRef) {
         }
       }
 
-      // Stirring — applied every frame so the sweeping spoon motion is
-      // continuous and looks like a real fluid being mixed. The previous
-      // throttled-jitter approach is gone (only added wiggle, not flow).
+      // Stirring — applied every frame so the flow is continuous. Near an
+      // undissolved crystal the water moves with the crystal (boundary layer).
       if (vars.stirring) {
-        applyStirring(particles, dt, elapsed, width, height, 1)
+        applyStirring(particles, dt, elapsed, width, height, 1, {
+          ...rxn.stirConfig,
+          crystal: crystalRef.current,
+          boundaryLayer: rxn.crystalConfig?.boundaryLayer,
+        })
       }
+
+      // Bent water molecules turn to face the ion they are bonded to
+      orientWaterMolecules(particles, dt)
 
       // Emulsifier bond dynamics — every frame, each emulsifier seeks
       // unclaimed oil + water partners within range and applies a spring
@@ -1022,7 +1050,37 @@ function createParticle(pType, x, y) {
   p.charge = pType.charge || 0   // formal ionic charge (+1 / -1 / 0)
   p.baseRadius = p.radius
   if (pType.hideLabel) p.label = ''
+  if (p.shape === 'water') {
+    // Bent molecules start in random orientations and tumble (see orientWaterMolecules)
+    p.angle = Math.random() * Math.PI * 2
+    p.spin = (Math.random() - 0.5) * 4
+  }
   return p
+}
+
+// A bent water molecule's angle points along its hydrogen (δ⁺) side. Bonded
+// to a cation it turns its oxygen (δ⁻) toward the ion; bonded to an anion it
+// turns its hydrogens toward the ion; unbonded it tumbles freely.
+function orientWaterMolecules(particles, dt) {
+  const ions = new Map()
+  for (const p of particles) {
+    if (p.alive && p.charge) ions.set(p.id, p)
+  }
+  if (ions.size === 0) return
+  const maxTurn = 10 * dt
+  for (const w of particles) {
+    if (!w.alive || w.shape !== 'water') continue
+    const ion = w.bondedIonId != null ? ions.get(w.bondedIonId) : null
+    if (ion) {
+      const awayFromIon = Math.atan2(w.y - ion.y, w.x - ion.x)
+      const target = ion.charge > 0 ? awayFromIon : awayFromIon + Math.PI
+      const diff = Math.atan2(Math.sin(target - w.angle), Math.cos(target - w.angle))
+      w.angle += Math.max(-maxTurn, Math.min(maxTurn, diff))
+    } else {
+      if (Math.random() < dt * 0.5) w.spin = (Math.random() - 0.5) * 4
+      w.angle += w.spin * dt
+    }
+  }
 }
 
 // Standard normal random number (Box–Muller)

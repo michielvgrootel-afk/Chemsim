@@ -121,6 +121,33 @@ export function getSprite(type, color, radius, label, shape = 'circle') {
       ctx.strokeRect(cx - half, cy - half, half * 2, half * 2)
       break
 
+    case 'water': {
+      // Bent H₂O (104.5°): red oxygen (δ⁻) with two white hydrogens (δ⁺)
+      // pointing along +x; the renderer rotates it via p.angle.
+      const oxygenR = radius * 0.62
+      const hydrogenR = radius * 0.38
+      const ox = cx - radius * 0.22
+      const bond = radius * 0.68
+      const halfAngle = (104.5 / 2) * Math.PI / 180
+      const hx = ox + bond * Math.cos(halfAngle)
+      const hy = bond * Math.sin(halfAngle)
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)'
+      ctx.lineWidth = 1
+      ctx.fillStyle = '#eef1f6'
+      for (const side of [-1, 1]) {
+        ctx.beginPath()
+        ctx.arc(hx, cy + side * hy, hydrogenR, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.stroke()
+      }
+      ctx.fillStyle = '#e05555'
+      ctx.beginPath()
+      ctx.arc(ox, cy, oxygenR, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.stroke()
+      break
+    }
+
     case 'emulsifier': {
       // Amphipathic molecule — drawn pointing RIGHT in canonical orientation
       // (renderer rotates it via p.angle so the tail points at bonded oil).

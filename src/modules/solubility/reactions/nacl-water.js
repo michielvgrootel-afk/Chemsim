@@ -7,7 +7,7 @@ export const naclWaterScenario = {
   syllabusRef: 'S2.1',
   name: 'Salt in Water',
   subtitle: 'NaCl dissolves in H\u2082O',
-  description: 'Watch polar water molecules pull apart an ionic crystal lattice. The partial charges on water attract Na\u207a and Cl\u207b ions, breaking the crystal apart.',
+  description: 'Watch polar water molecules pull apart an ionic crystal lattice. Each water molecule is drawn as a red oxygen (\u03b4\u207b) with two white hydrogens (\u03b4\u207a); the partial charges attract Na\u207a and Cl\u207b ions, breaking the crystal apart.',
 
   guidingQuestion: 'Why does table salt disappear when you stir it into water?',
   assignmentGoal: 'Observe how water molecules surround and separate the ions. Try changing the temperature to see its effect on dissolution speed.',
@@ -16,9 +16,13 @@ export const naclWaterScenario = {
     // `charge` carries the formal ionic charge (+1 / -1). It's separate from
     // `polarity` (which the "like dissolves like" force model uses as a scalar
     // magnitude) so that same-charge ions can repel each other electrostatically.
-    { type: 'Na', label: 'Na\u207a', color: '#4f9cf0', shape: 'circle', radius: 14, mass: 1.2, polarity: 0.9, charge: +1 },
-    { type: 'Cl', label: 'Cl\u207b', color: '#3dba7e', shape: 'circle', radius: 16, mass: 1.5, polarity: 0.9, charge: -1 },
-    { type: 'H2O', label: 'H\u2082O', color: '#8ab4f0', shape: 'diamond', radius: 7, mass: 0.8, polarity: 0.85, charge: 0 },
+    //
+    // Ion sizes follow real ionic radii (Na\u207a 102 pm, Cl\u207b 181 pm, ratio 1.77).
+    // Water is drawn as a bent molecule (red O, white H's) and kept smaller
+    // than true scale so the container can hold enough of it.
+    { type: 'Na', label: 'Na\u207a', color: '#4f9cf0', shape: 'circle', radius: 12, mass: 1.2, polarity: 0.9, charge: +1 },
+    { type: 'Cl', label: 'Cl\u207b', color: '#3dba7e', shape: 'circle', radius: 21, mass: 1.5, polarity: 0.9, charge: -1 },
+    { type: 'H2O', label: 'H\u2082O', color: '#e05555', shape: 'water', radius: 7, mass: 0.8, polarity: 0.85, charge: 0, hideLabel: true },
   ],
 
   variables: [
@@ -36,7 +40,7 @@ export const naclWaterScenario = {
       type: 'toggle',
       default: false,
       icon: 'zap',
-      tooltip: 'Stirring moves fresh solvent past the crystal, speeding up dissolution.',
+      tooltip: 'Stirring carries the crystal around and sweeps fresh water past its surface, so it dissolves faster. It doesn’t change how much salt can dissolve.',
     },
   ],
 
@@ -51,7 +55,7 @@ export const naclWaterScenario = {
     types: ['Na', 'Cl'],  // Alternating pattern (Na/Cl/Na/Cl... checkerboard)
     cols: 4,
     rows: 4,
-    spacing: 38,
+    spacing: 34,      // Na⁺ and Cl⁻ just touching (12 + 21 px), as in a real crystal
     offsetX: 0.2,   // Fraction of canvas width for lattice center
     offsetY: 0.5,
     bound: true,     // Lock ions in place until hydrated
@@ -67,10 +71,13 @@ export const naclWaterScenario = {
   // Gating is REVERSIBLE — if an ion's hydration shell drops below threshold,
   // it stops moving (vx=vy=0) and waits until the shell rebuilds
   hydrationConfig: {
-    radius: 32,          // px — tight inner hydration sphere (must touch the ion)
-                         //       at this radius, bulk water density gives ~2 waters per sphere,
-                         //       so an ion only "feels mobile" once it has actively recruited
-                         //       enough waters via ion-dipole attraction
+    radii: {             // px, centre to centre — inner hydration sphere around each ion:
+      Na: 34,            //       a touching water sits at 12 + 7 = 19 px from Na⁺
+      Cl: 42,            //       and at 21 + 7 = 28 px from Cl⁻; the extra room lets a
+    },                   //       partly buried surface ion still gather its shell. Bulk
+                         //       water alone gives ~2–3 waters per sphere, so an ion only
+                         //       "feels mobile" once it has actively recruited more
+    radius: 32,          // fallback for types not listed in radii{}
     thresholds: {        // water molecules needed to MOVE
       Na: 5,             // Na+ : 5 waters in shell to be mobile (real Na+ shell: 4-6)
       Cl: 6,             // Cl- : 6 waters in shell to be mobile (real Cl- shell: ~6)
@@ -89,6 +96,22 @@ export const naclWaterScenario = {
     soluteDamping: 0,          // No solute-solute polarity forces
     solventDamping: 0,         // No water-water polarity forces
     soluteMultiplier: 1,
+    ionRepelRangeFactor: 1.8,  // like charges repel within 1.8 × (rA + rB), so the
+                               // gap scales with ion size (big Cl⁻ keep further apart)
+  },
+
+  // Stirring flow: divergence-free cells, so the water stays evenly spread
+  // (the default 'gyres' flow is built to break up oil/water layers)
+  stirConfig: { field: 'cellular', speed: 180, steer: 14 },
+
+  // The undissolved crystal moves as one rigid solid (src/engine/crystal.js)
+  crystalConfig: {
+    flowFollow: 0.35,     // crystal moves at ~35 % of the stirring flow (heavy solid)
+    responseRate: 1.5,    // 1/s — how quickly it picks up the flow
+    settleRate: 2.5,      // 1/s — how quickly it stops after stirring ends
+    maxSpin: 1.0,         // rad/s
+    restitution: 0.3,     // bounce off the container walls
+    boundaryLayer: 30,    // px — water this close to the crystal moves with it
   },
 
   initialRatio: { Na: 0.05, Cl: 0.05, H2O: 0.9 },
@@ -109,7 +132,7 @@ export const naclWaterScenario = {
   annotations: [
     {
       id: 'default',
-      text: 'Sodium chloride (NaCl) is an ionic compound \u2014 Na\u207a and Cl\u207b are held together by electrostatic attraction in a crystal lattice. Watch how polar water molecules surround and pull the ions apart.',
+      text: 'Sodium chloride (NaCl) is an ionic compound \u2014 Na\u207a and Cl\u207b are held together by electrostatic attraction in a crystal lattice. Notice that Cl\u207b is much bigger than Na\u207a. Each water molecule is a red oxygen (\u03b4\u207b) with two white hydrogens (\u03b4\u207a): watch how they surround and pull the ions apart.',
       condition: 'always',
     },
     {
@@ -134,7 +157,7 @@ export const naclWaterScenario = {
     },
     {
       id: 'stirring',
-      text: 'Stirring moves fresh water past the crystal surface, carrying dissolved ions away and exposing more surface to solvent. This speeds up dissolution but doesn\u2019t change total solubility.',
+      text: 'Stirring carries the whole crystal around and sweeps fresh water past its surface, while dissolved ions are carried away. The stirring doesn\u2019t tear ions out \u2014 each one still has to be surrounded by water before it leaves. This speeds up dissolution but doesn\u2019t change total solubility.',
       condition: (vars) => vars.stirring,
     },
   ],
