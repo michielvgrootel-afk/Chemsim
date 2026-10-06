@@ -8,7 +8,7 @@ const ICONS = {
   plus: '\u2795',
 }
 
-export function VariablePanel({ variables, values, onUpdate, onAction, particleCounts, onParticleCountsChange, particleTypes, initialRatio, maxParticleCount = 40, activationEnergyKJ, activationEnergyWithCatalystKJ }) {
+export function VariablePanel({ variables, values, onUpdate, onAction, particleCounts, onParticleCountsChange, particleTypes, initialRatio, setupControls, maxParticleCount = 40, activationEnergyKJ, activationEnergyWithCatalystKJ }) {
   if (!variables) return null
 
   // Build per-type sliders from initialRatio (only reactant types)
@@ -16,8 +16,26 @@ export function VariablePanel({ variables, values, onUpdate, onAction, particleC
 
   return (
     <div className="space-y-4">
+      {/* Scenario-specific starting setup (e.g. crystal size), stored with
+          the particle counts so changing it restarts the simulation */}
+      {setupControls && onParticleCountsChange && (
+        <div className="p-3 rounded-lg space-y-3" style={{ background: '#2a2f3a' }}>
+          <h4 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#6b7585' }}>
+            Starting Setup
+          </h4>
+          {setupControls.map(control => (
+            <SetupControl
+              key={control.id}
+              control={control}
+              value={particleCounts?.[control.id] ?? control.default}
+              onChange={(value) => onParticleCountsChange(prev => ({ ...prev, [control.id]: value }))}
+            />
+          ))}
+        </div>
+      )}
+
       {/* Per-particle-type count sliders */}
-      {reactantTypes.length > 0 && onParticleCountsChange && (
+      {!setupControls && reactantTypes.length > 0 && onParticleCountsChange && (
         <div className="p-3 rounded-lg space-y-3" style={{ background: '#2a2f3a' }}>
           <h4 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#6b7585' }}>
             Initial Particles
@@ -156,6 +174,30 @@ function ActivationEnergyCard({ activationEnergyKJ, activationEnergyWithCatalyst
           </p>
         )}
       </div>
+    </div>
+  )
+}
+
+function SetupControl({ control, value, onChange }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs font-medium" style={{ color: '#e8eaf0' }}>{control.label}</span>
+        <span className="text-xs font-mono font-semibold" style={{ color: '#4f9cf0' }}>
+          {control.format ? control.format(value) : value}
+        </span>
+      </div>
+      <input
+        type="range"
+        min={control.min}
+        max={control.max}
+        step={control.step || 1}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full"
+        style={{ height: 20 }}
+        aria-label={control.label}
+      />
     </div>
   )
 }

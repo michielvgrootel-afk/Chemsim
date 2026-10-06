@@ -121,6 +121,41 @@ export function getSprite(type, color, radius, label, shape = 'circle') {
       ctx.strokeRect(cx - half, cy - half, half * 2, half * 2)
       break
 
+    case 'oil': {
+      // Triglyceride (an oil/fat molecule): a short glycerol backbone with
+      // three long zigzag hydrocarbon tails, drawn skeletal-formula style
+      // pointing along +x; the renderer rotates it via p.angle.
+      const left = cx - radius * 0.85
+      const right = cx + radius * 0.95
+      const gap = radius * 0.62        // spacing between the three tails
+      const zig = radius * 0.16        // zigzag amplitude
+      const segments = 5
+      const segLen = (right - left) / segments
+      const tracePath = () => {
+        ctx.beginPath()
+        ctx.moveTo(left, cy - gap)
+        ctx.lineTo(left, cy + gap)
+        for (const k of [-1, 0, 1]) {
+          ctx.moveTo(left, cy + k * gap)
+          for (let s = 1; s <= segments; s++) {
+            ctx.lineTo(left + s * segLen, cy + k * gap + (s % 2 ? -zig : zig))
+          }
+        }
+      }
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+      // Dark under-stroke so the chains stay crisp on the dark background
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)'
+      ctx.lineWidth = Math.max(2, radius * 0.17) + 2
+      tracePath()
+      ctx.stroke()
+      ctx.strokeStyle = color
+      ctx.lineWidth = Math.max(2, radius * 0.17)
+      tracePath()
+      ctx.stroke()
+      break
+    }
+
     case 'water': {
       // Bent H₂O (104.5°): red oxygen (δ⁻) with two white hydrogens (δ⁺)
       // pointing along +x; the renderer rotates it via p.angle.

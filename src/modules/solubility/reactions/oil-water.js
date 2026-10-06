@@ -13,8 +13,11 @@ export const oilWaterScenario = {
   assignmentGoal: 'Observe how oil and water separate into layers. Try stirring \u2014 does it help? Compare this to the scenarios where substances DO dissolve.',
 
   particleTypes: [
-    { type: 'OIL', label: 'Oil', color: '#f0913a', shape: 'hexagon', radius: 14, mass: 0.9, polarity: -0.8, buoyancy: 0.15 },
-    { type: 'H2O', label: 'H\u2082O', color: '#8ab4f0', shape: 'diamond', radius: 10, mass: 1.0, polarity: 0.85, buoyancy: -0.05 },
+    // Oil drawn as a triglyceride: three nonpolar hydrocarbon tails (the
+    // same kind of chain as the emulsifier's tail)
+    { type: 'OIL', label: 'Oil', color: '#f0913a', shape: 'oil', radius: 14, mass: 0.9, polarity: -0.8, buoyancy: 0.15, hideLabel: true },
+    // Bent water molecule (red O, white H's), same as Salt in Water
+    { type: 'H2O', label: 'H\u2082O', color: '#e05555', shape: 'water', radius: 10, mass: 1.0, polarity: 0.85, buoyancy: -0.05, hideLabel: true },
     // Emulsifier (soap) \u2014 amphipathic molecule. Polarity 0 because the
     // molecule is neither uniformly polar nor nonpolar; the binding system
     // handles its dual character explicitly (head bonds water, tail bonds oil).

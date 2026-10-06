@@ -100,13 +100,15 @@ export function useSimulation(reaction, canvasRef) {
     if (rxn.hasPolarityForces && rxn.spawnMode === 'lattice' && rxn.latticeConfig) {
       // Spawn solute in a crystal lattice grid
       const lc = rxn.latticeConfig
+      // Crystal size can come from the setup slider (an index into lc.sizes)
+      const [cols, rows] = lc.sizes?.[particleCounts.latticeSize] ?? [lc.cols, lc.rows]
       const centerX = width * lc.offsetX
       const centerY = height * lc.offsetY
-      const startX = centerX - (lc.cols - 1) * lc.spacing / 2
-      const startY = centerY - (lc.rows - 1) * lc.spacing / 2
+      const startX = centerX - (cols - 1) * lc.spacing / 2
+      const startY = centerY - (rows - 1) * lc.spacing / 2
 
-      for (let row = 0; row < lc.rows; row++) {
-        for (let col = 0; col < lc.cols; col++) {
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
           const typeIdx = (row + col) % lc.types.length
           const typeId = lc.types[typeIdx]
           const pType = rxn.particleTypes.find(pt => pt.type === typeId)
@@ -132,16 +134,16 @@ export function useSimulation(reaction, canvasRef) {
 
       // Fill remaining space with solvent
       const solventTypes = rxn.solventTypes || []
-      const soluteCount = particles.length
-      const solventCount = lc.solventCount || Math.max(0, (particleCounts[solventTypes[0]] || 30) - 0)
+      // Water count from the setup slider, else the scenario's default
+      const solventCount = particleCounts[solventTypes[0]] ?? lc.solventCount ?? 30
       for (let i = 0; i < solventCount; i++) {
         const typeId = solventTypes[i % solventTypes.length] || solventTypes[0]
         const pType = rxn.particleTypes.find(pt => pt.type === typeId)
         if (!pType) continue
         let x, y
         // Keep solvent away from lattice initially
-        const exclX = lc.cols * lc.spacing / 2 + 30
-        const exclY = lc.rows * lc.spacing / 2 + 30
+        const exclX = cols * lc.spacing / 2 + 30
+        const exclY = rows * lc.spacing / 2 + 30
         do {
           x = Math.random() * (width - 40) + 20
           y = Math.random() * (height - 40) + 20
@@ -602,8 +604,8 @@ export function useSimulation(reaction, canvasRef) {
         })
       }
 
-      // Bent water molecules turn to face the ion they are bonded to
-      orientWaterMolecules(particles, dt)
+      // Drawn molecules tumble; bonded water turns to face its ion
+      orientMolecules(particles, dt)
 
       // Emulsifier bond dynamics — every frame, each emulsifier seeks
       // unclaimed oil + water partners within range and applies a spring
@@ -1050,34 +1052,36 @@ function createParticle(pType, x, y) {
   p.charge = pType.charge || 0   // formal ionic charge (+1 / -1 / 0)
   p.baseRadius = p.radius
   if (pType.hideLabel) p.label = ''
-  if (p.shape === 'water') {
-    // Bent molecules start in random orientations and tumble (see orientWaterMolecules)
+  if (TUMBLE_RATES[p.shape]) {
+    // Drawn molecules start in random orientations and tumble (see orientMolecules)
     p.angle = Math.random() * Math.PI * 2
-    p.spin = (Math.random() - 0.5) * 4
+    p.spin = (Math.random() - 0.5) * TUMBLE_RATES[p.shape]
   }
   return p
 }
 
-// A bent water molecule's angle points along its hydrogen (δ⁺) side. Bonded
-// to a cation it turns its oxygen (δ⁻) toward the ion; bonded to an anion it
-// turns its hydrogens toward the ion; unbonded it tumbles freely.
-function orientWaterMolecules(particles, dt) {
+// Molecule shapes that are drawn rotated, with their tumbling speed range (rad/s)
+const TUMBLE_RATES = { water: 4, oil: 1.5 }
+
+// Drawn molecules tumble freely. A bent water molecule's angle points along
+// its hydrogen (δ⁺) side: bonded to a cation it turns its oxygen (δ⁻) toward
+// the ion, bonded to an anion it turns its hydrogens toward the ion.
+function orientMolecules(particles, dt) {
   const ions = new Map()
   for (const p of particles) {
     if (p.alive && p.charge) ions.set(p.id, p)
   }
-  if (ions.size === 0) return
   const maxTurn = 10 * dt
   for (const w of particles) {
-    if (!w.alive || w.shape !== 'water') continue
-    const ion = w.bondedIonId != null ? ions.get(w.bondedIonId) : null
+    if (!w.alive || !TUMBLE_RATES[w.shape]) continue
+    const ion = w.shape === 'water' && w.bondedIonId != null ? ions.get(w.bondedIonId) : null
     if (ion) {
       const awayFromIon = Math.atan2(w.y - ion.y, w.x - ion.x)
       const target = ion.charge > 0 ? awayFromIon : awayFromIon + Math.PI
       const diff = Math.atan2(Math.sin(target - w.angle), Math.cos(target - w.angle))
       w.angle += Math.max(-maxTurn, Math.min(maxTurn, diff))
     } else {
-      if (Math.random() < dt * 0.5) w.spin = (Math.random() - 0.5) * 4
+      if (Math.random() < dt * 0.5) w.spin = (Math.random() - 0.5) * TUMBLE_RATES[w.shape]
       w.angle += w.spin * dt
     }
   }

@@ -150,6 +150,7 @@ export function SimulationPage({
             onParticleCountsChange={setParticleCounts}
             particleTypes={reaction.particleTypes}
             initialRatio={reaction.initialRatio}
+            setupControls={reaction.setupControls}
             maxParticleCount={reaction.maxParticleCount || 40}
             activationEnergyKJ={reaction.activationEnergyKJ}
             activationEnergyWithCatalystKJ={reaction.activationEnergyWithCatalystKJ}
@@ -185,6 +186,9 @@ export function SimulationPage({
 
 function getDefaultParticleCounts(reaction) {
   if (!reaction) return {}
+  if (reaction.setupControls) {
+    return Object.fromEntries(reaction.setupControls.map(c => [c.id, c.default]))
+  }
   const total = reaction.totalParticles || SIM_DEFAULTS.particleCount
   const counts = {}
   const entries = Object.entries(reaction.initialRatio)

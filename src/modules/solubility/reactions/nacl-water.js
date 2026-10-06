@@ -1,6 +1,10 @@
 // NaCl dissolving in Water — ionic dissolution
 // Na+ and Cl- ions in a crystal lattice pulled apart by polar water molecules
 
+// Crystal sizes for the setup slider (cols × rows). Every size has an even
+// number of ions, so the checkerboard holds equal Na⁺ and Cl⁻ (neutral, 1:1).
+const CRYSTAL_SIZES = [[2, 2], [4, 2], [4, 3], [4, 4], [5, 4], [6, 4], [6, 5], [6, 6]]
+
 export const naclWaterScenario = {
   id: 'nacl-water',
   yearGroups: ['MYP5', 'DP1'],
@@ -53,17 +57,33 @@ export const naclWaterScenario = {
   spawnMode: 'lattice',
   latticeConfig: {
     types: ['Na', 'Cl'],  // Alternating pattern (Na/Cl/Na/Cl... checkerboard)
-    cols: 4,
+    sizes: CRYSTAL_SIZES, // chosen with the "Crystal size" setup slider
+    cols: 4,          // fallback size when no slider value is given
     rows: 4,
     spacing: 34,      // Na⁺ and Cl⁻ just touching (12 + 21 px), as in a real crystal
     offsetX: 0.2,   // Fraction of canvas width for lattice center
     offsetY: 0.5,
     bound: true,     // Lock ions in place until hydrated
-    solventCount: 300,  // Override: fill container with water (~19:1 water:ion ratio)
-                        // Bumped from 220 → 300 to keep plenty of free solvent
-                        // around the larger 4x4 crystal (16 ions × ~5.5 waters
-                        // per shell = ~88 waters needed at full dissolution)
+    solventCount: 300,  // fallback water count when no slider value is given
   },
+
+  // Setup sliders shown instead of per-ion counts: the ions come as a
+  // crystal, so students choose its size and how much water surrounds it.
+  // Each ion needs a shell of 5–6 waters, so very little water cannot
+  // dissolve a big crystal completely.
+  setupControls: [
+    {
+      id: 'latticeSize',
+      label: 'Crystal size',
+      min: 0, max: CRYSTAL_SIZES.length - 1, step: 1, default: 3,
+      format: (i) => `${CRYSTAL_SIZES[i][0]} × ${CRYSTAL_SIZES[i][1]} (${CRYSTAL_SIZES[i][0] * CRYSTAL_SIZES[i][1]} ions)`,
+    },
+    {
+      id: 'H2O',
+      label: 'Water molecules',
+      min: 100, max: 500, step: 10, default: 300,
+    },
+  ],
 
   // Hydration-based dissolution: ions break free when enough water surrounds them
   // Per-type thresholds reflect real coordination numbers in aqueous solution
@@ -113,8 +133,6 @@ export const naclWaterScenario = {
     restitution: 0.3,     // bounce off the container walls
     boundaryLayer: 30,    // px — water this close to the crystal moves with it
   },
-
-  initialRatio: { Na: 0.05, Cl: 0.05, H2O: 0.9 },
 
   speedFromTemp: (temp) => 0.3 + (temp / 100) * 2.0,
 
