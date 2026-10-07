@@ -193,7 +193,7 @@ cp -r dist/* docs/
 git add docs/ && git commit -m "Update docs/ with latest build"
 git push
 ```
-The repo is configured to serve from the `docs/` folder on the `main` branch. Commit the source changes together with `docs/`. `dist/` is still tracked from an old commit but is not deployed: never stage it.
+The repo is configured to serve from the `docs/` folder on the `main` branch. Commit the source changes together with `docs/`. `dist/` is only local build output and is git-ignored.
 
 ## Coding Conventions
 
