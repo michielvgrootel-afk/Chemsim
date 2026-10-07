@@ -51,7 +51,7 @@ export function renderFrame(ctx, canvasWidth, canvasHeight, particles, annotatio
 
     // Draw cached sprite at logical size (sprite may be rendered at DPR resolution)
     const sprite = getSprite(p.type, p.color, p.radius, p.label, p.shape || 'circle')
-    const logicalSize = p.radius * 2 + 4
+    const logicalSize = sprite._logicalSize
     if (typeof p.angle === 'number') {
       // Rotate around particle centre — used by emulsifiers so their tail
       // points at the bonded oil particle.

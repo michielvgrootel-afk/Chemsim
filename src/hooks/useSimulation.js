@@ -3,7 +3,7 @@ import { Particle, resetParticleIds } from '../engine/particle'
 import { SpatialGrid } from '../engine/spatialGrid'
 import { detectAndResolveCollisions } from '../engine/collisionDetector'
 import { renderFrame } from '../engine/renderer'
-import { preRenderSprites, clearSpriteCache } from '../engine/spriteCache'
+import { preRenderSprites, clearSpriteCache, spriteReach } from '../engine/spriteCache'
 import { CatalystSurface } from '../engine/catalystSurface'
 import { applyPolarityForces, applyStirring, stirringFlowVelocity, calcDissolutionPercent, calcLatticeDissolutionPercent, calcSeparationPercent } from '../engine/polarityForces'
 import { createCrystal, updateCrystal } from '../engine/crystal'
@@ -498,6 +498,17 @@ export function useSimulation(reaction, canvasRef) {
         soluteTypes: rxn.soluteTypes || [],
         ...rxn.polarityConfig,
       }
+      // Forces given for a reference temperature scale with the particles'
+      // kinetic energy (∝ speed²). Hydration then plays out the same way at
+      // every temperature, only faster when hot and slower when cold, instead
+      // of fast hot water flying past ions too quickly to be held.
+      const forceRefTemp = rxn.polarityConfig?.forceReferenceTemp
+      if (forceRefTemp != null && rxn.speedFromTemp) {
+        const speedRatio = rxn.speedFromTemp(vars.temperature) / rxn.speedFromTemp(forceRefTemp)
+        const energyScale = speedRatio * speedRatio
+        polarityOpts.attractStrength = (rxn.polarityConfig.attractStrength ?? 300) * energyScale
+        polarityOpts.ionRepelStrength = (rxn.polarityConfig.ionRepelStrength ?? 700) * energyScale
+      }
       // When emulsifier is active, dramatically weaken oil-oil cohesion so
       // droplets break apart into the emulsion instead of clumping. This
       // mirrors what real surfactants do: they reduce the interfacial
@@ -530,8 +541,6 @@ export function useSimulation(reaction, canvasRef) {
           const soluteTypes = rxn.soluteTypes || []
           // Shell radius can differ per ion (Cl⁻ is much bigger than Na⁺)
           const shellRadius = (type) => hc.radii?.[type] ?? hc.radius
-          // Temperature modulates threshold slightly: hotter water dislodges easier
-          const tempFactor = 1 + (vars.temperature - 25) / 200
           const speed = rxn.speedFromTemp(vars.temperature)
           const perTypeThresholds = hc.thresholds || {}
 
@@ -564,11 +573,12 @@ export function useSimulation(reaction, canvasRef) {
           // Step 2: gate each ion's mobility based on its (exclusive) shell size.
           for (const p of particles) {
             if (!p.alive || !soluteTypes.includes(p.type)) continue
-            const baseThreshold = perTypeThresholds[p.type] ?? hc.threshold
-            const effectiveThreshold = Math.max(1, Math.round(baseThreshold / tempFactor))
+            // The same shell size at every temperature: temperature acts
+            // through how fast the water moves (see forceReferenceTemp)
+            const threshold = perTypeThresholds[p.type] ?? hc.threshold
             const waterCount = shellCounts.get(p.id) || 0
 
-            if (waterCount >= effectiveThreshold) {
+            if (waterCount >= threshold) {
               // Properly hydrated — ion can move
               if (p.bound) {
                 p.bound = false
@@ -605,7 +615,7 @@ export function useSimulation(reaction, canvasRef) {
       }
 
       // Drawn molecules tumble; bonded water turns to face its ion
-      orientMolecules(particles, dt)
+      orientMolecules(particles, dt, width, height)
 
       // Emulsifier bond dynamics — every frame, each emulsifier seeks
       // unclaimed oil + water partners within range and applies a spring
@@ -1061,12 +1071,13 @@ function createParticle(pType, x, y) {
 }
 
 // Molecule shapes that are drawn rotated, with their tumbling speed range (rad/s)
-const TUMBLE_RATES = { water: 4, oil: 1.5 }
+const TUMBLE_RATES = { water: 4, oil: 0.8 }   // a long oil chain turns slowly
 
 // Drawn molecules tumble freely. A bent water molecule's angle points along
 // its hydrogen (δ⁺) side: bonded to a cation it turns its oxygen (δ⁻) toward
 // the ion, bonded to an anion it turns its hydrogens toward the ion.
-function orientMolecules(particles, dt) {
+// A long oil chain near a container wall lies along it (see keepInsideWalls).
+function orientMolecules(particles, dt, width, height) {
   const ions = new Map()
   for (const p of particles) {
     if (p.alive && p.charge) ions.set(p.id, p)
@@ -1083,8 +1094,30 @@ function orientMolecules(particles, dt) {
     } else {
       if (Math.random() < dt * 0.5) w.spin = (Math.random() - 0.5) * TUMBLE_RATES[w.shape]
       w.angle += w.spin * dt
+      if (spriteReach(w.shape) > 1) keepInsideWalls(w, width, height)
     }
   }
+}
+
+// A molecule drawn longer than its collision circle (an oil chain) turns
+// just enough, near a wall, that its ends never poke through: the half
+// length L must satisfy L·|sin θ| ≤ the gap to the top or bottom wall and
+// L·|cos θ| ≤ the gap to the side walls.
+function keepInsideWalls(p, width, height) {
+  const halfLength = p.radius * spriteReach(p.shape)
+  let c = Math.cos(p.angle)
+  let s = Math.sin(p.angle)
+  const maxS = Math.max(0, Math.min(p.y, height - p.y)) / halfLength
+  if (Math.abs(s) > maxS) {
+    s = Math.sign(s) * maxS
+    c = (c >= 0 ? 1 : -1) * Math.sqrt(1 - s * s)
+  }
+  const maxC = Math.max(0, Math.min(p.x, width - p.x)) / halfLength
+  if (Math.abs(c) > maxC) {
+    c = Math.sign(c) * maxC
+    s = (s >= 0 ? 1 : -1) * Math.sqrt(1 - c * c)
+  }
+  p.angle = Math.atan2(s, c)
 }
 
 // Standard normal random number (Box–Muller)

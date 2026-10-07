@@ -4,6 +4,16 @@
 const cache = new Map()
 let cachedDpr = 1
 
+// Most sprites fit inside the particle's collision circle. Some molecules are
+// drawn bigger than it (the physics still uses the circle): a long
+// hydrocarbon chain reaches this many radii from its centre.
+const SPRITE_REACH = { oil: 2.4 }
+
+// How far a shape's drawing reaches from the particle centre, in radii
+export function spriteReach(shape) {
+  return SPRITE_REACH[shape] ?? 1
+}
+
 export function clearSpriteCache() {
   cache.clear()
   cachedDpr = window.devicePixelRatio || 1
@@ -14,7 +24,7 @@ export function getSprite(type, color, radius, label, shape = 'circle') {
   const key = `${type}-${color}-${radius}-${shape}-${dpr}`
   if (cache.has(key)) return cache.get(key)
 
-  const logicalSize = radius * 2 + 4
+  const logicalSize = radius * (SPRITE_REACH[shape] ?? 1) * 2 + 4
   const physicalSize = Math.ceil(logicalSize * dpr)
   const canvas = document.createElement('canvas')
   canvas.width = physicalSize
@@ -122,35 +132,31 @@ export function getSprite(type, color, radius, label, shape = 'circle') {
       break
 
     case 'oil': {
-      // Triglyceride (an oil/fat molecule): a short glycerol backbone with
-      // three long zigzag hydrocarbon tails, drawn skeletal-formula style
-      // pointing along +x; the renderer rotates it via p.angle.
-      const left = cx - radius * 0.85
-      const right = cx + radius * 0.95
-      const gap = radius * 0.62        // spacing between the three tails
-      const zig = radius * 0.16        // zigzag amplitude
-      const segments = 5
-      const segLen = (right - left) / segments
+      // One long hydrocarbon chain, drawn skeletal-formula style along +x
+      // (every corner of the zigzag is a carbon); the renderer rotates it
+      // via p.angle. It reaches beyond the particle's collision circle.
+      const carbons = 10
+      const halfLength = radius * SPRITE_REACH.oil - 3
+      const segLen = (2 * halfLength) / (carbons - 1)
+      const zig = segLen * 0.4         // close to the real 109.5° C–C–C angle
       const tracePath = () => {
         ctx.beginPath()
-        ctx.moveTo(left, cy - gap)
-        ctx.lineTo(left, cy + gap)
-        for (const k of [-1, 0, 1]) {
-          ctx.moveTo(left, cy + k * gap)
-          for (let s = 1; s <= segments; s++) {
-            ctx.lineTo(left + s * segLen, cy + k * gap + (s % 2 ? -zig : zig))
-          }
+        for (let i = 0; i < carbons; i++) {
+          const x = cx - halfLength + i * segLen
+          const y = cy + (i % 2 ? -zig : zig)
+          if (i === 0) ctx.moveTo(x, y)
+          else ctx.lineTo(x, y)
         }
       }
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
-      // Dark under-stroke so the chains stay crisp on the dark background
+      // Dark under-stroke so the chain stays crisp on the dark background
       ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)'
-      ctx.lineWidth = Math.max(2, radius * 0.17) + 2
+      ctx.lineWidth = Math.max(2.5, radius * 0.2) + 2
       tracePath()
       ctx.stroke()
       ctx.strokeStyle = color
-      ctx.lineWidth = Math.max(2, radius * 0.17)
+      ctx.lineWidth = Math.max(2.5, radius * 0.2)
       tracePath()
       ctx.stroke()
       break

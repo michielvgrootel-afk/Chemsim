@@ -13,8 +13,9 @@ export const oilWaterScenario = {
   assignmentGoal: 'Observe how oil and water separate into layers. Try stirring \u2014 does it help? Compare this to the scenarios where substances DO dissolve.',
 
   particleTypes: [
-    // Oil drawn as a triglyceride: three nonpolar hydrocarbon tails (the
-    // same kind of chain as the emulsifier's tail)
+    // Oil drawn as one long nonpolar hydrocarbon chain (the same kind of
+    // chain as the emulsifier's tail). The drawing is longer than the
+    // particle's collision circle; the physics still treats it as a circle.
     { type: 'OIL', label: 'Oil', color: '#f0913a', shape: 'oil', radius: 14, mass: 0.9, polarity: -0.8, buoyancy: 0.15, hideLabel: true },
     // Bent water molecule (red O, white H's), same as Salt in Water
     { type: 'H2O', label: 'H\u2082O', color: '#e05555', shape: 'water', radius: 10, mass: 1.0, polarity: 0.85, buoyancy: -0.05, hideLabel: true },

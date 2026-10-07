@@ -118,6 +118,12 @@ export const naclWaterScenario = {
     soluteMultiplier: 1,
     ionRepelRangeFactor: 1.8,  // like charges repel within 1.8 × (rA + rB), so the
                                // gap scales with ion size (big Cl⁻ keep further apart)
+    forceReferenceTemp: 25,    // the strengths above are for 25 °C and scale with the
+                               // water's kinetic energy (∝ speed²). Real ion–water
+                               // attraction is far stronger than thermal motion at any
+                               // temperature from 0–100 °C, so hot water still hydrates
+                               // ions. With fixed forces, fast hot water flew straight
+                               // past the ions and dissolving got SLOWER above ~25 °C.
   },
 
   // Stirring flow: divergence-free cells, so the water stays evenly spread
