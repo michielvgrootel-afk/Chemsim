@@ -18,7 +18,7 @@ function Stat({ label, value, color }) {
   )
 }
 
-export function StatusBar({ stats, enzymeStats, dissolutionStats, phStats, gasStats, onTakeQuiz }) {
+export function StatusBar({ stats, enzymeStats, dissolutionStats, phStats, gasStats, labStats, onTakeQuiz }) {
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60)
     const s = Math.floor(seconds % 60)
@@ -30,7 +30,14 @@ export function StatusBar({ stats, enzymeStats, dissolutionStats, phStats, gasSt
       style={{ background: '#1e2535', border: '1px solid #363c4a' }}>
 
       <div className="flex items-center gap-x-6 gap-y-1 flex-wrap">
-        {gasStats ? (
+        {labStats ? (
+          <>
+            <Stat label="pH" value={labStats.ph != null ? labStats.ph.toFixed(2) : '—'} color={labStats.color} />
+            <Stat label="Volume" value={`${labStats.volume.toFixed(1)} cm³`} color="#e8eaf0" />
+            <Stat label="T" value={`${labStats.tempC} °C`} color="#f0913a" />
+            <Stat label="Time" value={formatTime(labStats.elapsed)} color="#e8eaf0" />
+          </>
+        ) : gasStats ? (
           <>
             <Stat label="P" value={`${Math.round(gasStats.P)} kPa`} color="#4f9cf0" />
             <Stat label="V" value={`${gasStats.V.toFixed(1)} dm³`} color="#3dba7e" />

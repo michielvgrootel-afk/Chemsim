@@ -47,7 +47,8 @@ src/
 │
 ├── components/
 │   ├── FrontPage.jsx          # Year-group tabs (MYP 5 / DP 1 / DP 2), simulations grouped by module
-│   ├── SimulationPage.jsx     # Main sim UI (canvas + graph + controls); opens paused
+│   ├── SimulationPage.jsx     # Main sim UI (canvas + graph + controls); opens paused.
+│   │                          # A config with `page: 'ph-lab'` gets the pH lab page instead
 │   ├── Canvas.jsx             # HTML5 Canvas with high-DPI scaling
 │   ├── LiveGraph.jsx          # Recharts line chart with line toggle, or XY scatter plots (gases)
 │   ├── VariablePanel.jsx      # Sliders, toggles, "Add drop" buttons, Starting Setup controls
@@ -56,7 +57,9 @@ src/
 │   ├── QuizModal.jsx          # MCQ quiz interface
 │   ├── ConfirmModal.jsx       # Simulation switch confirmation
 │   ├── LoadingScreen.jsx      # Initial loading animation
-│   └── ErrorBoundary.jsx      # React error boundary ("Something went wrong")
+│   ├── ErrorBoundary.jsx      # React error boundary ("Something went wrong")
+│   └── phlab/                 # pH Scale Sandbox page (no particles): PHLabPage, PHGraph,
+│                              # Beaker (+ burette), LabControls, DataTable, NumbersPanel, ui, format
 │
 ├── engine/
 │   ├── particle.js            # Particle class (position, velocity, physics)
@@ -70,11 +73,14 @@ src/
 │   ├── crystal.js             # Undissolved NaCl crystal moving as one rigid body
 │   ├── emulsifier.js          # Soap molecules binding oil and water (Oil in Water)
 │   ├── gasUtils.js            # Gas units, piston volume, pressure, van der Waals
-│   └── acidBaseUtils.js       # pH calculation, indicator colours, "Add drop" spawning
+│   ├── acidBaseUtils.js       # Particle pH (count ratio), indicator colours, "Add drop" spawning
+│   └── phLab.js               # pH lab chemistry: exact pH (charge balance, Ka/Kb/Kw), Kw(T),
+│                              # dilution / pour out / evaporate, titration, indicator colours
 │
 ├── hooks/
 │   ├── useSimulation.js       # Master hook: particles, physics, reactions, graph, annotations
 │   ├── useGameLoop.js         # Game loop state (pause/resume/reset)
+│   ├── usePHLab.js            # pH lab state: clock, pours, burette, undo, kept runs, predictions, table
 │   └── useLocalStorage.js     # localStorage wrapper
 │
 ├── modules/
@@ -96,7 +102,7 @@ src/
 └── utils/
     ├── constants.js           # Colours, defaults, YEAR_GROUPS, screen names, storage keys
     ├── storage.js             # Safe localStorage helpers
-    └── csvExport.js           # CSV export for quiz results
+    └── csvExport.js           # CSV export (quiz results, pH lab data table)
 ```
 
 ## Architecture
@@ -121,6 +127,9 @@ App (screen router)
  │    ├── LiveGraph (Recharts)
  │    ├── VariablePanel (sliders, toggles, buttons, setup controls)
  │    └── StatusBar (stats + quiz button)
+ ├── PHLabPage (instead of the above when the config has page: 'ph-lab')
+ │    ├── usePHLab: beaker contents + clock; every change → phLab.analyse() → exact pH
+ │    └── PHGraph (pH vs time or volume added), Beaker, controls, DataTable, NumbersPanel
  └── TeacherDashboard (PIN-gated)
 ```
 
@@ -144,6 +153,7 @@ Module-specific keys (read the existing configs before changing these):
 - **Solubility:** `hasPolarityForces`, `soluteTypes`, `solventTypes`, `spawnMode` (`'lattice'`, `'mixed'` or `'cluster'`), `latticeConfig`, `hydrationConfig`, `polarityConfig` (incl. `forceReferenceTemp`), `stirConfig`, `crystalConfig`, `immiscible`, `emulsifierConfig`
 - **Gases:** `gasConfig` (volume range, piston, mol per particle, real-gas settings, van der Waals a and b)
 - **Acids & Bases:** `phConfig`, `indicatorConfig`, `randomGate`, `equilibriumModifier`
+- **pH Scale Sandbox** (`page: 'ph-lab'`, no particle keys): `substances` (`{ id, formula, type, strong, pKa | pKb, ion }`), `concentrations`, `addAmounts`, `removeAmounts`, `pourRate`, `beaker`, `titration`, `indicators` (`low`/`high` colour-change range), `temperature`. Its annotation `text` may be a function of `(vars, stats)`.
 
 Quizzes live in each module's `quiz.js`, keyed by simulation id: `{ title, questions: [{ id, question, options, correctIndex }] }`. Options are shown in the order written, so spread the correct answers across A–D.
 
@@ -171,6 +181,7 @@ The teacher's on/off list is one flat array of simulation ids. A module with non
 - **Gases:** ideal-gas pressure is measured from particle–wall collisions; real-gas mode shows larger, attracting particles but takes its pressure from the van der Waals equation.
 - **Molecules are drawn as recognisable structures** (bent H₂O, a long hydrocarbon chain for oil, a head-and-tail emulsifier) but collide as circles. A drawing may reach beyond its circle (`SPRITE_REACH` in `spriteCache.js`).
 - **Colour-blind accessibility:** Every particle type has a distinct shape (circle, diamond, triangle, hexagon, star, …) in addition to colour.
+- **The pH lab calculates pH exactly**, not from particles: the charge balance with Ka, Kb and Kw is solved for [H⁺], so dilution (strong acid +1 per 10×, weak acid +0.5), neutralisation, buffers and titration curves come out as in a real lab. Temperature changes only Kw (neutral pH 6.51 at 60 °C).
 - **Simulations open paused** so students can read the opening annotation first.
 - **No student accounts or names;** quiz results are stored anonymously in localStorage.
 
@@ -221,4 +232,4 @@ The repo is configured to serve from the `docs/` folder on the `main` branch. Co
 5. **localStorage is the only persistence.** No backend, no database, no auth server.
 6. **Check `useSimulation.js`** for the main simulation loop — this is where physics, collisions, and reactions happen each frame.
 7. **Commit and push only when the teacher asks.** They say "commit" and "push" explicitly and check the result on the live site.
-8. **Measuring behaviour** (e.g. how long salt takes to dissolve): a hidden browser tab or pane throttles the animation, so real-time timing is unreliable. Instead, from the browser console, find the `GameLoop` through the canvas element's React fiber (`__reactFiber$…` → hook refs), set `loop.paused = true`, and call `loop.updateFn(1/60, loop.elapsed += 1/60)` in a loop. Single runs vary, so average several.
+8. **Measuring behaviour** (e.g. how long salt takes to dissolve): a hidden browser tab or pane throttles the animation, so real-time timing is unreliable. Instead, from the browser console, find the `GameLoop` through the canvas element's React fiber (`__reactFiber$…` → hook refs), set `loop.paused = true`, and call `loop.updateFn(1/60, loop.elapsed += 1/60)` in a loop. Single runs vary, so average several. The pH lab's chemistry (`src/engine/phLab.js`) is pure functions: check it directly in Node against textbook values.

@@ -20,6 +20,12 @@ export function exportQuizResultsCSV(results) {
   downloadCSV(csv, `chemsim-quiz-results-${new Date().toISOString().slice(0, 10)}.csv`)
 }
 
+// Any table as a CSV download; cells are written as given (format first)
+export function exportTableCSV(headers, rows, filename) {
+  const lines = [headers, ...rows].map(row => row.map(cell => escapeCsvField(cell ?? '')).join(','))
+  downloadCSV(lines.join('\n'), filename)
+}
+
 function escapeCsvField(field) {
   const str = String(field || '')
   if (str.includes(',') || str.includes('"') || str.includes('\n')) {

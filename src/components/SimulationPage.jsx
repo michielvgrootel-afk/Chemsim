@@ -8,8 +8,16 @@ import { ConfirmModal } from './ConfirmModal'
 import { useSimulation } from '../hooks/useSimulation'
 import { useGameLoop } from '../hooks/useGameLoop'
 import { SIM_DEFAULTS } from '../utils/constants'
+import { PHLabPage } from './phlab/PHLabPage'
 
-export function SimulationPage({
+// Most simulations are particle simulations; a scenario can ask for a page
+// of its own instead (the pH lab: `page: 'ph-lab'`)
+export function SimulationPage(props) {
+  if (props.reaction?.page === 'ph-lab') return <PHLabPage key={props.reaction.id} {...props} />
+  return <ParticleSimulationPage {...props} />
+}
+
+function ParticleSimulationPage({
   reaction, module, onReactionChange,
   pendingSwitch, onConfirmSwitch, onCancelSwitch
 }) {
