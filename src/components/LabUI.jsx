@@ -1,6 +1,6 @@
 import React from 'react'
 
-// Small building blocks shared by the pH lab panels, in the app's dark style
+// Small building blocks shared by the lab pages (pH lab, intermolecular forces), in the app's dark style
 
 export function Card({ title, right, children }) {
   return (

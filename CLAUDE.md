@@ -2,7 +2,7 @@
 
 ## What Is ChemSim?
 
-ChemSim is a **browser-based interactive chemistry simulation platform** for secondary school students: MYP 5 (~15–16 years old) and IB Chemistry DP 1 / DP 2 (~16–18). Students change variables (temperature, concentration, catalyst, stirring, volume, drops of acid or base) and watch real-time particle animations, live graphs and annotations that make invisible chemistry visible. Each simulation ends with a short multiple-choice quiz. Students don't log in or enter a name.
+ChemSim is a **browser-based interactive chemistry simulation platform** for secondary school students: MYP 4–5 (~14–16 years old) and IB Chemistry DP 1 / DP 2 (~16–18). Students change variables (temperature, concentration, catalyst, stirring, volume, drops of acid or base) and watch real-time particle animations, live graphs and annotations that make invisible chemistry visible. Each simulation ends with a short multiple-choice quiz. Students don't log in or enter a name.
 
 - **Live:** https://michielvgrootel-afk.github.io/Chemsim
 - **Repo:** https://github.com/michielvgrootel-afk/Chemsim
@@ -16,8 +16,10 @@ ChemSim is a **browser-based interactive chemistry simulation platform** for sec
 | | Hydrolysis of Aspirin (`aspirin`) | MYP5 | — |
 | | Fermentation of Glucose (`fermentation`) | MYP5 | — |
 | | Haber Process (`haber`) | MYP5, DP1 | R2.3 |
+| | Maxwell–Boltzmann Distribution (`maxwell-boltzmann`) | MYP5, DP1 | R2.2 |
 | Solubility | Salt in Water (`nacl-water`) | MYP5, DP1 | S2.1 |
 | | Oil in Water (`oil-water`) | MYP5, DP1 | S2.2 |
+| Intermolecular Forces | London Dispersion Forces (`london-dispersion`) | MYP4, MYP5, DP1 | S2.2 |
 | Gases | Ideal Gas Laws (`gas-laws`) | DP1 | S1.5 |
 | Acids & Bases | Strong vs Weak Acid (`strong-vs-weak`) | DP2 | R3.1.6 |
 | | Neutralisation (`neutralization`) | MYP5, DP2 | R3.1.7 |
@@ -46,9 +48,9 @@ src/
 ├── index.css                  # Tailwind imports
 │
 ├── components/
-│   ├── FrontPage.jsx          # Year-group tabs (MYP 5 / DP 1 / DP 2), simulations grouped by module
+│   ├── FrontPage.jsx          # Year-group tabs (MYP 4 / MYP 5 / DP 1 / DP 2), simulations grouped by module
 │   ├── SimulationPage.jsx     # Main sim UI (canvas + graph + controls); opens paused.
-│   │                          # A config with `page: 'ph-lab'` gets the pH lab page instead
+│   │                          # A config with `page: 'ph-lab'`, `'imf-lab'` or `'mb-lab'` gets its own page
 │   ├── Canvas.jsx             # HTML5 Canvas with high-DPI scaling
 │   ├── LiveGraph.jsx          # Recharts line chart with line toggle, or XY scatter plots (gases)
 │   ├── VariablePanel.jsx      # Sliders, toggles, "Add drop" buttons, Starting Setup controls
@@ -58,8 +60,13 @@ src/
 │   ├── ConfirmModal.jsx       # Simulation switch confirmation
 │   ├── LoadingScreen.jsx      # Initial loading animation
 │   ├── ErrorBoundary.jsx      # React error boundary ("Something went wrong")
-│   └── phlab/                 # pH Scale Sandbox page (no particles): PHLabPage, PHGraph,
-│                              # Beaker (+ burette), LabControls, DataTable, NumbersPanel, ui, format
+│   ├── LabUI.jsx              # Card, Chip, ActionButton, Switch, Hint shared by the lab pages
+│   ├── phlab/                 # pH Scale Sandbox page (no particles): PHLabPage, PHGraph,
+│   │                          # Beaker (+ burette), LabControls, DataTable, NumbersPanel, format
+│   ├── imflab/                # London Dispersion Forces page: IMFLabPage, MoleculeView (two
+│   │                          # molecules with every electron, canvas), BPGraph (boiling points)
+│   └── mblab/                 # Maxwell–Boltzmann page: MBLabPage, drawMB (box of particles +
+│                              # energy graph with one dot per particle, both canvas)
 │
 ├── engine/
 │   ├── particle.js            # Particle class (position, velocity, physics)
@@ -74,8 +81,12 @@ src/
 │   ├── emulsifier.js          # Soap molecules binding oil and water (Oil in Water)
 │   ├── gasUtils.js            # Gas units, piston volume, pressure, van der Waals
 │   ├── acidBaseUtils.js       # Particle pH (count ratio), indicator colours, "Add drop" spawning
-│   └── phLab.js               # pH lab chemistry: exact pH (charge balance, Ka/Kb/Kw), Kw(T),
-│                              # dilution / pour out / evaporate, titration, indicator colours
+│   ├── phLab.js               # pH lab chemistry: exact pH (charge balance, Ka/Kb/Kw), Kw(T),
+│   │                          # dilution / pour out / evaporate, titration, indicator colours
+│   ├── imfModel.js            # IMF lab: molecules (atoms, bonds, every electron) from displayed
+│                              # formulas; fluctuating electron field (temporary/induced dipoles)
+│   └── maxwellBoltzmann.js    # M–B curve (3D energies), fraction above Ea, particle sample whose
+│                              # collisions share energy out (keeps the distribution)
 │
 ├── hooks/
 │   ├── useSimulation.js       # Master hook: particles, physics, reactions, graph, annotations
@@ -84,9 +95,11 @@ src/
 │   └── useLocalStorage.js     # localStorage wrapper
 │
 ├── modules/
-│   ├── registry.js            # Module registry: ratesOfReaction, solubility, gases, acidsBases
-│   ├── rates-of-reaction/     # general, aspirin, fermentation, haber
+│   ├── registry.js            # Module registry: ratesOfReaction, solubility, intermolecularForces,
+│   │                          # gases, acidsBases
+│   ├── rates-of-reaction/     # general, aspirin, fermentation, haber, maxwell-boltzmann
 │   ├── solubility/            # nacl-water, oil-water
+│   ├── intermolecular-forces/ # london-dispersion
 │   ├── gases/                 # gas-laws
 │   └── acids-bases/           # strong-vs-weak, neutralization, buffer, ph-scale
 │                              # each module: index.js (module + simulation list),
@@ -100,7 +113,7 @@ src/
 │   └── AssignmentNotes.jsx    # Teacher notes per simulation
 │
 └── utils/
-    ├── constants.js           # Colours, defaults, YEAR_GROUPS, screen names, storage keys
+    ├── constants.js           # Colours, defaults, YEAR_GROUPS + DEFAULT_YEAR, screen names, storage keys
     ├── storage.js             # Safe localStorage helpers
     └── csvExport.js           # CSV export (quiz results, pH lab data table)
 ```
@@ -130,6 +143,14 @@ App (screen router)
  ├── PHLabPage (instead of the above when the config has page: 'ph-lab')
  │    ├── usePHLab: beaker contents + clock; every change → phLab.analyse() → exact pH
  │    └── PHGraph (pH vs time or volume added), Beaker, controls, DataTable, NumbersPanel
+ ├── IMFLabPage (page: 'imf-lab')
+ │    ├── MoleculeView: two molecules, every electron; the top one's electrons shift towards or
+ │    │   away from the lower one (temporary dipole), the lower one's are pushed the same way (induced)
+ │    └── BPGraph (boiling points + temperature line), molecule facts, attraction meter, predict,
+ │        a slider that turns the lower molecule (0° side by side → 90° end on)
+ ├── MBLabPage (page: 'mb-lab')
+ │    └── one rAF loop: sample of particles (engine/maxwellBoltzmann.js) → drawBox + drawGraph;
+ │        click a particle in either view to follow it
  └── TeacherDashboard (PIN-gated)
 ```
 
@@ -154,6 +175,8 @@ Module-specific keys (read the existing configs before changing these):
 - **Gases:** `gasConfig` (volume range, piston, mol per particle, real-gas settings, van der Waals a and b)
 - **Acids & Bases:** `phConfig`, `indicatorConfig`, `randomGate`, `equilibriumModifier`
 - **pH Scale Sandbox** (`page: 'ph-lab'`, no particle keys): `substances` (`{ id, formula, type, strong, pKa | pKb, ion }`), `concentrations`, `addAmounts`, `removeAmounts`, `pourRate`, `beaker`, `titration`, `indicators` (`low`/`high` colour-change range), `temperature`. Its annotation `text` may be a function of `(vars, stats)`.
+- **London Dispersion Forces** (`page: 'imf-lab'`, no particle keys): `sets` of molecules, each `{ id, name, formula, axis, bp, mp, mr, dHvap, forces, electrons, structure, arrangement, note }`. `structure` is a displayed formula in C–C bond units (`atoms`, `bonds`, `lonePairs`, `charges` for permanent δ, `hDonor`/`hAcceptor`); `arrangement` (`dx`, `mirror`, `flipY`) places the second molecule against the first. Electrons are generated from the structure; `electrons` is the expected count, checked against it.
+- **Maxwell–Boltzmann Distribution** (`page: 'mb-lab'`, no particle keys): `particles` (sample size), `temperature` (K) and `activationEnergy` (kJ mol⁻¹) as `{ min, max, step, default }`, `catalystFactor` (Ea with catalyst = factor × Ea), `graph` (`maxEnergy`, `binWidth` per dot column, `maxCount` dots on the y-axis). Annotation `text` may be a function of `(vars, stats)`.
 
 Quizzes live in each module's `quiz.js`, keyed by simulation id: `{ title, questions: [{ id, question, options, correctIndex }] }`. Options are shown in the order written, so spread the correct answers across A–D.
 
@@ -182,6 +205,8 @@ The teacher's on/off list is one flat array of simulation ids. A module with non
 - **Molecules are drawn as recognisable structures** (bent H₂O, a long hydrocarbon chain for oil, a head-and-tail emulsifier) but collide as circles. A drawing may reach beyond its circle (`SPRITE_REACH` in `spriteCache.js`).
 - **Colour-blind accessibility:** Every particle type has a distinct shape (circle, diamond, triangle, hexagon, star, …) in addition to colour.
 - **The pH lab calculates pH exactly**, not from particles: the charge balance with Ka, Kb and Kw is solved for [H⁺], so dilution (strong acid +1 per 10×, weak acid +0.5), neutralisation, buffers and titration curves come out as in a real lab. Temperature changes only Kw (neutral pH 6.51 at 60 °C).
+- **London forces are shown, not computed:** the molecules lie one above the other, so the top molecule's electrons shift up or down, towards or away from the other (a temporary dipole), by an amount that varies along it as a sum of slowly varying random waves. The lower molecule's electrons are pushed the same way (an induced dipole), so the facing sides are always δ− opposite δ+. Small molecules shift as a whole; longer ones get several patches at once and more contact. Inner-shell electrons barely move; halogen outer electrons move more down the group. The attraction meter is scaled so its average equals the real ΔHvap, and the pair separates above the real boiling point. The lower molecule can be turned (0–90°): its induced dipole fades along it away from the end that touches, and the meter's average is kept for side by side, so turned pairs show less attraction.
+- **Maxwell–Boltzmann:** particle energies follow the 3D distribution (the textbook curve), although the box is flat. A collision shares the pair's total energy out again in the proportions of a real gas, so energy is conserved, single particles keep changing energy and the sample keeps the distribution. Heating scales every energy. Activation energies are lower than real ones (50–100 kJ mol⁻¹) so that particles above Ea are visible in a sample of 200; the page says so.
 - **Simulations open paused** so students can read the opening annotation first.
 - **No student accounts or names;** quiz results are stored anonymously in localStorage.
 
@@ -221,7 +246,7 @@ The repo is configured to serve from the `docs/` folder on the `main` branch. Co
 - **"% Dissolved" (Salt in Water)** counts an ion the first time it breaks free. Freed ions whose water shell thins freeze again next to the crystal, so at 50 % the crystal can still look almost whole.
 - **Oil chains overlap visually** in the oil layer, because they are drawn longer than their collision circles.
 - **Bundle size:** the JS bundle is ~700 kB, so Vite warns about chunk size. That's fine for now, but avoid heavy new dependencies.
-- **Planned, not started:** collision theory, standalone equilibrium.
+- **Planned, not started:** standalone equilibrium.
 
 ## Important Notes for AI Developers
 
@@ -232,4 +257,4 @@ The repo is configured to serve from the `docs/` folder on the `main` branch. Co
 5. **localStorage is the only persistence.** No backend, no database, no auth server.
 6. **Check `useSimulation.js`** for the main simulation loop — this is where physics, collisions, and reactions happen each frame.
 7. **Commit and push only when the teacher asks.** They say "commit" and "push" explicitly and check the result on the live site.
-8. **Measuring behaviour** (e.g. how long salt takes to dissolve): a hidden browser tab or pane throttles the animation, so real-time timing is unreliable. Instead, from the browser console, find the `GameLoop` through the canvas element's React fiber (`__reactFiber$…` → hook refs), set `loop.paused = true`, and call `loop.updateFn(1/60, loop.elapsed += 1/60)` in a loop. Single runs vary, so average several. The pH lab's chemistry (`src/engine/phLab.js`) is pure functions: check it directly in Node against textbook values.
+8. **Measuring behaviour** (e.g. how long salt takes to dissolve): a hidden browser tab or pane throttles the animation, so real-time timing is unreliable. Instead, from the browser console, find the `GameLoop` through the canvas element's React fiber (`__reactFiber$…` → hook refs), set `loop.paused = true`, and call `loop.updateFn(1/60, loop.elapsed += 1/60)` in a loop. Single runs vary, so average several. The pH lab's chemistry (`src/engine/phLab.js`) is pure functions: check it directly in Node against textbook values. For the IMF lab, bundle the module with `node_modules/.bin/esbuild --bundle --format=esm` and check every molecule's built electron count (`buildMolecule(structure).electrons.length`) against its `electrons` value. The Maxwell–Boltzmann engine (`src/engine/maxwellBoltzmann.js`) can be bundled the same way: check the curve's area (1), `fractionAbove` against numeric integration, and that a sample run for a while keeps the same share above Ea.

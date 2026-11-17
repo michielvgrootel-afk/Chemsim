@@ -18,7 +18,8 @@ function Stat({ label, value, color }) {
   )
 }
 
-export function StatusBar({ stats, enzymeStats, dissolutionStats, phStats, gasStats, labStats, onTakeQuiz }) {
+// `items` ([{ label, value, color }]) lets a page list its own stats
+export function StatusBar({ stats, enzymeStats, dissolutionStats, phStats, gasStats, labStats, items, onTakeQuiz }) {
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60)
     const s = Math.floor(seconds % 60)
@@ -30,7 +31,9 @@ export function StatusBar({ stats, enzymeStats, dissolutionStats, phStats, gasSt
       style={{ background: '#1e2535', border: '1px solid #363c4a' }}>
 
       <div className="flex items-center gap-x-6 gap-y-1 flex-wrap">
-        {labStats ? (
+        {items ? (
+          items.map(item => <Stat key={item.label} label={item.label} value={item.value} color={item.color} />)
+        ) : labStats ? (
           <>
             <Stat label="pH" value={labStats.ph != null ? labStats.ph.toFixed(2) : '—'} color={labStats.color} />
             <Stat label="Volume" value={`${labStats.volume.toFixed(1)} cm³`} color="#e8eaf0" />

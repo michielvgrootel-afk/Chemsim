@@ -233,4 +233,76 @@ export const quizzes = {
       },
     ],
   },
+
+  'maxwell-boltzmann': {
+    title: 'Maxwell\u2013Boltzmann Distribution Quiz',
+    questions: [
+      {
+        id: 'mb1',
+        question: 'What does the height of the Maxwell\u2013Boltzmann curve at a particular energy show?',
+        options: [
+          'How fast the reaction goes at that energy',
+          'How many particles have that kinetic energy',
+          'The temperature of the particles with that energy',
+          'How much energy is released when those particles react',
+        ],
+        correctIndex: 1,
+      },
+      {
+        id: 'mb2',
+        question: 'What does the total area under the curve represent?',
+        options: [
+          'The activation energy',
+          'The mean energy of the particles',
+          'The number of collisions per second',
+          'The total number of particles',
+        ],
+        correctIndex: 3,
+      },
+      {
+        id: 'mb3',
+        question: 'A gas is heated. How does its Maxwell\u2013Boltzmann curve change?',
+        options: [
+          'The peak moves to higher energy and gets lower; the area under the curve stays the same',
+          'The peak moves to higher energy and gets taller',
+          'The whole curve moves to the right without changing shape',
+          'The area under the curve increases because the particles gain energy',
+        ],
+        correctIndex: 0,
+      },
+      {
+        id: 'mb4',
+        question: 'Why does a small rise in temperature increase the rate of a reaction so much?',
+        options: [
+          'All particles now have more energy than the activation energy',
+          'The activation energy decreases',
+          'The number of particles with energy \u2265 Ea increases by a large factor',
+          'The particles get bigger, so they collide more often',
+        ],
+        correctIndex: 2,
+      },
+      {
+        id: 'mb5',
+        question: 'How does adding a catalyst affect the Maxwell\u2013Boltzmann distribution?',
+        options: [
+          'It moves the curve to the right',
+          'The curve stays the same, but a lower Ea means more particles have enough energy',
+          'It gives the particles more kinetic energy',
+          'It makes the curve taller and narrower',
+        ],
+        correctIndex: 1,
+      },
+      {
+        id: 'mb6',
+        question: 'A particle has less energy than Ea. What happens to it over time, at constant temperature?',
+        options: [
+          'It can never react',
+          'Its energy stays the same until the temperature changes',
+          'It reacts as soon as it collides',
+          'Collisions keep changing its energy, so later it may have enough to react',
+        ],
+        correctIndex: 3,
+      },
+    ],
+  },
 }

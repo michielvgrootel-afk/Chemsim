@@ -75,10 +75,14 @@ export const GRAPH_CONFIG = {
 // Year groups shown as tabs on the front page. Each scenario lists the
 // year groups it belongs to in its `yearGroups` array.
 export const YEAR_GROUPS = [
-  { id: 'MYP5', label: 'MYP 5', blurb: 'Rates of reaction, solubility, and an introduction to acids and bases.' },
+  { id: 'MYP4', label: 'MYP 4', blurb: 'Intermolecular forces: why bigger molecules boil at higher temperatures.' },
+  { id: 'MYP5', label: 'MYP 5', blurb: 'Rates of reaction, solubility, intermolecular forces, and an introduction to acids and bases.' },
   { id: 'DP1', label: 'DP 1', blurb: 'IB Chemistry year 1: gases, rates, equilibrium and bonding.' },
   { id: 'DP2', label: 'DP 2', blurb: 'IB Chemistry year 2: acids, bases and buffers.' },
 ]
+
+// The tab the front page opens on (most simulations are for MYP 5)
+export const DEFAULT_YEAR = 'MYP5'
 
 // Screen identifiers
 export const SCREENS = {

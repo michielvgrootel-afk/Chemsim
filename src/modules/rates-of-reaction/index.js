@@ -5,6 +5,7 @@ import { generalReaction } from './reactions/general'
 import { aspirinReaction } from './reactions/aspirin'
 import { fermentationReaction } from './reactions/fermentation'
 import { haberReaction } from './reactions/haber'
+import { maxwellBoltzmannScenario } from './reactions/maxwell-boltzmann'
 import { quizzes } from './quiz'
 
 export const ratesOfReaction = {
@@ -13,7 +14,7 @@ export const ratesOfReaction = {
   level: 'MYP5',
   description: 'Explore how temperature, concentration, and catalysts affect the speed of chemical reactions.',
 
-  reactions: [generalReaction, aspirinReaction, fermentationReaction, haberReaction],
+  reactions: [generalReaction, aspirinReaction, fermentationReaction, haberReaction, maxwellBoltzmannScenario],
 
   quizzes,
 

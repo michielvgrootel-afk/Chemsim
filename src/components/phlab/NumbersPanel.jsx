@@ -1,5 +1,5 @@
 import React from 'react'
-import { Card, Hint } from './ui'
+import { Card, Hint } from '../LabUI'
 import { formatSci } from './format'
 
 // "Show the numbers" (DP): the concentrations behind the pH, and what is

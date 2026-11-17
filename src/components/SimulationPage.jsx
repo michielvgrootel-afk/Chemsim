@@ -9,11 +9,15 @@ import { useSimulation } from '../hooks/useSimulation'
 import { useGameLoop } from '../hooks/useGameLoop'
 import { SIM_DEFAULTS } from '../utils/constants'
 import { PHLabPage } from './phlab/PHLabPage'
+import { IMFLabPage } from './imflab/IMFLabPage'
+import { MBLabPage } from './mblab/MBLabPage'
 
 // Most simulations are particle simulations; a scenario can ask for a page
-// of its own instead (the pH lab: `page: 'ph-lab'`)
+// of its own instead (`page: 'ph-lab'` or `page: 'imf-lab'`)
 export function SimulationPage(props) {
   if (props.reaction?.page === 'ph-lab') return <PHLabPage key={props.reaction.id} {...props} />
+  if (props.reaction?.page === 'imf-lab') return <IMFLabPage key={props.reaction.id} {...props} />
+  if (props.reaction?.page === 'mb-lab') return <MBLabPage key={props.reaction.id} {...props} />
   return <ParticleSimulationPage {...props} />
 }
 

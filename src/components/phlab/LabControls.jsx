@@ -1,5 +1,5 @@
 import React from 'react'
-import { Card, Chip, ActionButton, Hint } from './ui'
+import { Card, Chip, ActionButton, Hint } from '../LabUI'
 
 export const WATER = { id: 'water', formula: 'H₂O', name: 'water', color: '#8ab4f0' }
 

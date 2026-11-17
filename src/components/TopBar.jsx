@@ -28,6 +28,7 @@ export function TopBar({ currentScreen, onNavigate, reactions, activeReactionId,
                   'aspirin': 'Aspirin',
                   'fermentation': 'Fermentation',
                   'haber': 'Haber',
+                  'maxwell-boltzmann': 'Maxwell–Boltzmann',
                 }
                 return (
                   <button

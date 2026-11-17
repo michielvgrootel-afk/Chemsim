@@ -7,7 +7,7 @@ import { SimulationPage } from './components/SimulationPage'
 import { TeacherDashboard } from './teacher/TeacherDashboard'
 import { getModule, getAllModules, getEnabledReactions, findReaction } from './modules/registry'
 import { getItem } from './utils/storage'
-import { SCREENS, STORAGE_KEYS, YEAR_GROUPS } from './utils/constants'
+import { SCREENS, STORAGE_KEYS, DEFAULT_YEAR } from './utils/constants'
 
 // A shared link (?reaction=<id>) preselects that simulation on the front page.
 function getLinkedReactionId() {
@@ -24,7 +24,7 @@ export default function App() {
     () => findReaction(linkedReactionId)?.module.id || 'rates-of-reaction'
   )
   const [yearId, setYearId] = useState(
-    () => findReaction(linkedReactionId)?.reaction.yearGroups?.[0] || YEAR_GROUPS[0].id
+    () => findReaction(linkedReactionId)?.reaction.yearGroups?.[0] || DEFAULT_YEAR
   )
 
   const module = getModule(activeModuleId)

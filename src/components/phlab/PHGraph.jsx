@@ -2,7 +2,7 @@ import React from 'react'
 import {
   ComposedChart, Line, XAxis, YAxis, CartesianGrid, ReferenceArea, ReferenceLine, ReferenceDot, ResponsiveContainer,
 } from 'recharts'
-import { Chip } from './ui'
+import { Chip } from '../LabUI'
 
 const CURRENT_COLOR = '#f4f5f8'
 const PREDICTION_COLOR = '#f0c040'
