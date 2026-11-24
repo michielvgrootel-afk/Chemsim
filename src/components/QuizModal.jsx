@@ -1,13 +1,11 @@
 import React, { useState } from 'react'
-import { setItem, getItem } from '../utils/storage'
-import { STORAGE_KEYS } from '../utils/constants'
 
-export function QuizModal({ isOpen, quiz, reactionId, moduleName, onClose }) {
+// The score and the correct answers are shown to the student; nothing is saved.
+export function QuizModal({ isOpen, quiz, onClose }) {
   const [currentQ, setCurrentQ] = useState(0)
   const [answers, setAnswers] = useState({})
   const [submitted, setSubmitted] = useState(false)
   const [score, setScore] = useState(0)
-  const [saveError, setSaveError] = useState(null)
 
   if (!isOpen || !quiz) return null
 
@@ -27,27 +25,6 @@ export function QuizModal({ isOpen, quiz, reactionId, moduleName, onClose }) {
     }
     setScore(correct)
     setSubmitted(true)
-
-    // Save to localStorage
-    const result = {
-      module: moduleName || 'Unknown',
-      reaction: reactionId,
-      score: correct,
-      totalQuestions: questions.length,
-      answers: { ...answers },
-      timestamp: new Date().toISOString(),
-    }
-
-    try {
-      const existing = getItem(STORAGE_KEYS.QUIZ_RESULTS, [])
-      existing.push(result)
-      const saved = setItem(STORAGE_KEYS.QUIZ_RESULTS, existing)
-      if (!saved) {
-        setSaveError('Quiz saving unavailable — please tell your teacher.')
-      }
-    } catch {
-      setSaveError('Quiz saving unavailable — please tell your teacher.')
-    }
   }
 
   const handleClose = () => {
@@ -55,7 +32,6 @@ export function QuizModal({ isOpen, quiz, reactionId, moduleName, onClose }) {
     setAnswers({})
     setSubmitted(false)
     setScore(0)
-    setSaveError(null)
     onClose()
   }
 
@@ -169,9 +145,6 @@ export function QuizModal({ isOpen, quiz, reactionId, moduleName, onClose }) {
                score >= questions.length * 0.6 ? 'Good effort! Review the concepts you missed.' :
                'Keep practising! Try the simulation again and focus on the concepts.'}
             </p>
-            {saveError && (
-              <p className="text-xs mt-2" style={{ color: '#e05555' }}>{saveError}</p>
-            )}
 
             {/* Show correct/incorrect */}
             <div className="mt-6 space-y-3 text-left">

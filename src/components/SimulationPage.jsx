@@ -179,8 +179,6 @@ function ParticleSimulationPage({
       <QuizModal
         isOpen={showQuiz}
         quiz={quiz}
-        reactionId={reaction.id}
-        moduleName={module.name}
         onClose={() => setShowQuiz(false)}
       />
 

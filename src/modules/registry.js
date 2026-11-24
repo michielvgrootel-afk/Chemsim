@@ -32,12 +32,3 @@ export function findReaction(reactionId) {
   }
   return null
 }
-
-// The teacher's on/off list is one flat array of reaction ids across all
-// modules. A module with none of its ids in the list (never configured, or
-// added after the list was saved) shows all of its reactions.
-export function getEnabledReactions(module, storedIds) {
-  if (!Array.isArray(storedIds)) return module.reactions
-  const enabled = module.reactions.filter(r => storedIds.includes(r.id))
-  return enabled.length > 0 ? enabled : module.reactions
-}

@@ -1,25 +1,3 @@
-// Generate and download CSV from quiz results
-
-export function exportQuizResultsCSV(results) {
-  if (!results || results.length === 0) return
-
-  // Only results saved by older versions carry a student name
-  const hasNames = results.some(r => r.studentName)
-  const headers = [...(hasNames ? ['Student Name'] : []), 'Module', 'Reaction', 'Score', 'Total Questions', 'Percentage', 'Timestamp']
-  const rows = results.map(r => [
-    ...(hasNames ? [escapeCsvField(r.studentName)] : []),
-    escapeCsvField(r.module || 'Rates of Reaction'),
-    escapeCsvField(r.reaction),
-    r.score,
-    r.totalQuestions,
-    Math.round((r.score / r.totalQuestions) * 100) + '%',
-    new Date(r.timestamp).toLocaleString(),
-  ])
-
-  const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
-  downloadCSV(csv, `chemsim-quiz-results-${new Date().toISOString().slice(0, 10)}.csv`)
-}
-
 // Any table as a CSV download; cells are written as given (format first)
 export function exportTableCSV(headers, rows, filename) {
   const lines = [headers, ...rows].map(row => row.map(cell => escapeCsvField(cell ?? '')).join(','))

@@ -37,13 +37,12 @@ ChemSim is a **browser-based interactive chemistry simulation platform** for sec
 | Rendering | HTML5 Canvas 2D | — |
 | Hosting | GitHub Pages (docs/ folder) | — |
 | State | React hooks (no Redux) | — |
-| Persistence | localStorage | — |
 
 ## Project Structure
 
 ```
 src/
-├── App.jsx                    # Screen router (FRONT → SIMULATION → TEACHER); reads ?reaction=<id>
+├── App.jsx                    # Screen router (FRONT → SIMULATION); reads ?reaction=<id>
 ├── main.jsx                   # React entry point
 ├── index.css                  # Tailwind imports
 │
@@ -55,8 +54,8 @@ src/
 │   ├── LiveGraph.jsx          # Recharts line chart with line toggle, or XY scatter plots (gases)
 │   ├── VariablePanel.jsx      # Sliders, toggles, "Add drop" buttons, Starting Setup controls
 │   ├── StatusBar.jsx          # Live stats (rate, % dissolved, pH, P/V/T…) + quiz button
-│   ├── TopBar.jsx             # Header + switcher between the module's simulations
-│   ├── QuizModal.jsx          # MCQ quiz interface
+│   ├── TopBar.jsx             # Header + switcher between the module's simulations, "Copy link"
+│   ├── QuizModal.jsx          # MCQ quiz: shows the score and correct answers, saves nothing
 │   ├── ConfirmModal.jsx       # Simulation switch confirmation
 │   ├── LoadingScreen.jsx      # Initial loading animation
 │   ├── ErrorBoundary.jsx      # React error boundary ("Something went wrong")
@@ -91,8 +90,7 @@ src/
 ├── hooks/
 │   ├── useSimulation.js       # Master hook: particles, physics, reactions, graph, annotations
 │   ├── useGameLoop.js         # Game loop state (pause/resume/reset)
-│   ├── usePHLab.js            # pH lab state: clock, pours, burette, undo, kept runs, predictions, table
-│   └── useLocalStorage.js     # localStorage wrapper
+│   └── usePHLab.js            # pH lab state: clock, pours, burette, undo, kept runs, predictions, table
 │
 ├── modules/
 │   ├── registry.js            # Module registry: ratesOfReaction, solubility, intermolecularForces,
@@ -105,17 +103,9 @@ src/
 │                              # each module: index.js (module + simulation list),
 │                              # quiz.js (quizzes), reactions/ (one config file per simulation)
 │
-├── teacher/
-│   ├── TeacherDashboard.jsx   # PIN-protected teacher panel (all modules)
-│   ├── PinEntry.jsx           # PIN setup/entry
-│   ├── ModuleManager.jsx      # Turn simulations on/off, shareable ?reaction= links
-│   ├── QuizResults.jsx        # Quiz result history (anonymous)
-│   └── AssignmentNotes.jsx    # Teacher notes per simulation
-│
 └── utils/
-    ├── constants.js           # Colours, defaults, YEAR_GROUPS + DEFAULT_YEAR, screen names, storage keys
-    ├── storage.js             # Safe localStorage helpers
-    └── csvExport.js           # CSV export (quiz results, pH lab data table)
+    ├── constants.js           # Colours, defaults, YEAR_GROUPS + DEFAULT_YEAR, screen names
+    └── csvExport.js           # CSV export (pH lab data table)
 ```
 
 ## Architecture
@@ -148,10 +138,9 @@ App (screen router)
  │    │   away from the lower one (temporary dipole), the lower one's are pushed the same way (induced)
  │    └── BPGraph (boiling points + temperature line), molecule facts, attraction meter, predict,
  │        a slider that turns the lower molecule (0° side by side → 90° end on)
- ├── MBLabPage (page: 'mb-lab')
- │    └── one rAF loop: sample of particles (engine/maxwellBoltzmann.js) → drawBox + drawGraph;
- │        click a particle in either view to follow it
- └── TeacherDashboard (PIN-gated)
+ └── MBLabPage (page: 'mb-lab')
+      └── one rAF loop: sample of particles (engine/maxwellBoltzmann.js) → drawBox + drawGraph;
+          click a particle in either view to follow it; "Half speed" runs the sample's clock at half rate
 ```
 
 ### How Simulations Work
@@ -191,7 +180,7 @@ Quizzes live in each module's `quiz.js`, keyed by simulation id: `{ title, quest
 2. Export `{ id, name, level, description, reactions, getReaction, getQuiz }` from its `index.js`
 3. Register it in `src/modules/registry.js`
 
-The teacher's on/off list is one flat array of simulation ids. A module with none of its ids in that list shows all its simulations (`getEnabledReactions`), so new simulations appear without any teacher setup.
+Every simulation appears on the front page under its year groups; there is no on/off list. The top bar's "Copy link" copies `?reaction=<id>`, which opens the front page with that simulation selected (teachers paste it into ManageBac).
 
 ## Key Design Decisions
 
@@ -208,7 +197,7 @@ The teacher's on/off list is one flat array of simulation ids. A module with non
 - **London forces are shown, not computed:** the molecules lie one above the other, so the top molecule's electrons shift up or down, towards or away from the other (a temporary dipole), by an amount that varies along it as a sum of slowly varying random waves. The lower molecule's electrons are pushed the same way (an induced dipole), so the facing sides are always δ− opposite δ+. Small molecules shift as a whole; longer ones get several patches at once and more contact. Inner-shell electrons barely move; halogen outer electrons move more down the group. The attraction meter is scaled so its average equals the real ΔHvap, and the pair separates above the real boiling point. The lower molecule can be turned (0–90°): its induced dipole fades along it away from the end that touches, and the meter's average is kept for side by side, so turned pairs show less attraction.
 - **Maxwell–Boltzmann:** particle energies follow the 3D distribution (the textbook curve), although the box is flat. A collision shares the pair's total energy out again in the proportions of a real gas, so energy is conserved, single particles keep changing energy and the sample keeps the distribution. Heating scales every energy. Activation energies are lower than real ones (50–100 kJ mol⁻¹) so that particles above Ea are visible in a sample of 200; the page says so.
 - **Simulations open paused** so students can read the opening annotation first.
-- **No student accounts or names;** quiz results are stored anonymously in localStorage.
+- **No accounts, names or saved data.** The quiz shows the score and the correct answers and stores nothing. The teacher panel (PIN, on/off list, quiz results, notes) was removed: it saved everything in one browser only, so it never reached students' laptops.
 
 ## Development Commands
 
@@ -254,7 +243,7 @@ The repo is configured to serve from the `docs/` folder on the `main` branch. Co
 2. **Test on the dev server** (`npm run dev`) before committing — the simulation runs at 60fps and bugs are immediately visible.
 3. **Don't add unnecessary dependencies.** This runs on school laptops with spotty internet. Keep the bundle small.
 4. **The `docs/` folder is the deployed site.** Always rebuild and copy to `docs/` when committing changes.
-5. **localStorage is the only persistence.** No backend, no database, no auth server.
+5. **Nothing is stored.** No backend, no database, no accounts, no localStorage.
 6. **Check `useSimulation.js`** for the main simulation loop — this is where physics, collisions, and reactions happen each frame.
 7. **Commit and push only when the teacher asks.** They say "commit" and "push" explicitly and check the result on the live site.
 8. **Measuring behaviour** (e.g. how long salt takes to dissolve): a hidden browser tab or pane throttles the animation, so real-time timing is unreliable. Instead, from the browser console, find the `GameLoop` through the canvas element's React fiber (`__reactFiber$…` → hook refs), set `loop.paused = true`, and call `loop.updateFn(1/60, loop.elapsed += 1/60)` in a loop. Single runs vary, so average several. The pH lab's chemistry (`src/engine/phLab.js`) is pure functions: check it directly in Node against textbook values. For the IMF lab, bundle the module with `node_modules/.bin/esbuild --bundle --format=esm` and check every molecule's built electron count (`buildMolecule(structure).electrons.length`) against its `electrons` value. The Maxwell–Boltzmann engine (`src/engine/maxwellBoltzmann.js`) can be bundled the same way: check the curve's area (1), `fractionAbove` against numeric integration, and that a sample run for a while keeps the same share above Ea.

@@ -88,13 +88,4 @@ export const DEFAULT_YEAR = 'MYP5'
 export const SCREENS = {
   FRONT: 'front',
   SIMULATION: 'simulation',
-  TEACHER: 'teacher',
-}
-
-// localStorage keys
-export const STORAGE_KEYS = {
-  PIN: 'chemsim_pin',
-  ACTIVE_MODULES: 'chemsim_active_modules',
-  QUIZ_RESULTS: 'chemsim_quiz_results',
-  ASSIGNMENT_NOTES: 'chemsim_assignment_notes',
 }

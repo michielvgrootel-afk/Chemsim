@@ -268,8 +268,6 @@ export function PHLabPage({ reaction, module, pendingSwitch, onConfirmSwitch, on
       <QuizModal
         isOpen={showQuiz}
         quiz={module.getQuiz(reaction.id)}
-        reactionId={reaction.id}
-        moduleName={module.name}
         onClose={() => setShowQuiz(false)}
       />
 

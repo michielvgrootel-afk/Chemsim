@@ -1,8 +1,7 @@
 import React, { useState } from 'react'
 import { YEAR_GROUPS } from '../utils/constants'
-import { getEnabledReactions } from '../modules/registry'
 
-export function FrontPage({ modules, enabledIds, yearId, onYearChange, initialReactionId, onStart }) {
+export function FrontPage({ modules, yearId, onYearChange, initialReactionId, onStart }) {
   const [selectedId, setSelectedId] = useState(initialReactionId || null)
 
   const year = YEAR_GROUPS.find(y => y.id === yearId) || YEAR_GROUPS[0]
@@ -11,7 +10,7 @@ export function FrontPage({ modules, enabledIds, yearId, onYearChange, initialRe
   const sections = modules
     .map(mod => ({
       mod,
-      reactions: getEnabledReactions(mod, enabledIds).filter(r => r.yearGroups?.includes(year.id)),
+      reactions: mod.reactions.filter(r => r.yearGroups?.includes(year.id)),
     }))
     .filter(section => section.reactions.length > 0)
 

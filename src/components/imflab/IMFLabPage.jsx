@@ -304,8 +304,6 @@ export function IMFLabPage({ reaction, module, pendingSwitch, onConfirmSwitch, o
       <QuizModal
         isOpen={showQuiz}
         quiz={module.getQuiz(reaction.id)}
-        reactionId={reaction.id}
-        moduleName={module.name}
         onClose={() => setShowQuiz(false)}
       />
 

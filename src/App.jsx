@@ -4,10 +4,8 @@ import { LoadingScreen } from './components/LoadingScreen'
 import { TopBar } from './components/TopBar'
 import { FrontPage } from './components/FrontPage'
 import { SimulationPage } from './components/SimulationPage'
-import { TeacherDashboard } from './teacher/TeacherDashboard'
-import { getModule, getAllModules, getEnabledReactions, findReaction } from './modules/registry'
-import { getItem } from './utils/storage'
-import { SCREENS, STORAGE_KEYS, DEFAULT_YEAR } from './utils/constants'
+import { getModule, getAllModules, findReaction } from './modules/registry'
+import { SCREENS, DEFAULT_YEAR } from './utils/constants'
 
 // A shared link (?reaction=<id>) preselects that simulation on the front page.
 function getLinkedReactionId() {
@@ -29,7 +27,6 @@ export default function App() {
 
   const module = getModule(activeModuleId)
   const allModules = getAllModules()
-  const enabledIds = getItem(STORAGE_KEYS.ACTIVE_MODULES, null)
 
   // Simulate loading (fonts, etc.)
   useEffect(() => {
@@ -76,25 +73,22 @@ export default function App() {
 
   // In the simulation, the top bar offers the other simulations of the same
   // topic that belong to the student's year group.
-  const topBarReactions = getEnabledReactions(module, enabledIds).filter(r => r.yearGroups?.includes(yearId))
+  const topBarReactions = module.reactions.filter(r => r.yearGroups?.includes(yearId))
 
   return (
     <ErrorBoundary>
       <div className="min-h-screen" style={{ background: '#1a1d24' }}>
-        {currentScreen !== SCREENS.TEACHER && (
-          <TopBar
-            currentScreen={currentScreen}
-            onNavigate={handleNavigate}
-            reactions={topBarReactions}
-            activeReactionId={currentReaction?.id}
-            onReactionSwitch={handleReactionSwitch}
-          />
-        )}
+        <TopBar
+          currentScreen={currentScreen}
+          onNavigate={handleNavigate}
+          reactions={topBarReactions}
+          activeReactionId={currentReaction?.id}
+          onReactionSwitch={handleReactionSwitch}
+        />
 
         {currentScreen === SCREENS.FRONT && (
           <FrontPage
             modules={allModules}
-            enabledIds={enabledIds}
             yearId={yearId}
             onYearChange={setYearId}
             initialReactionId={currentReaction?.id || linkedReactionId}
@@ -110,13 +104,6 @@ export default function App() {
             pendingSwitch={pendingSwitch}
             onConfirmSwitch={handleConfirmSwitch}
             onCancelSwitch={handleCancelSwitch}
-          />
-        )}
-
-        {currentScreen === SCREENS.TEACHER && (
-          <TeacherDashboard
-            modules={allModules}
-            onNavigate={handleNavigate}
           />
         )}
       </div>
